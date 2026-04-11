@@ -4,10 +4,19 @@ Echo — a simple persistent companion AI.
 Talks to Ollama, remembers conversations, stays in character.
 """
 
+import io
 import json
 import os
+import wave
+import subprocess
 import requests
+import speech_recognition as sr
+import face
+from piper import PiperVoice
 from datetime import datetime
+
+PIPER_MODEL = os.path.join(os.path.dirname(os.path.abspath(__file__)), "en_US-lessac-medium.onnx")
+FFPLAY      = r"C:\Users\jrsrl\ffmpeg\ffmpeg-8.0.1-essentials_build\bin\ffplay.exe"
 
 # ── Config ─────────────────────────────────────────────────────────────────────
 
@@ -101,26 +110,56 @@ def handle_turn(user_input: str, conversations: list) -> str:
 
 # ── Main loop ──────────────────────────────────────────────────────────────────
 
+def listen() -> str | None:
+    try:
+        user_input = input("You: ").strip()
+        return user_input if user_input else None
+    except (EOFError, KeyboardInterrupt):
+        raise KeyboardInterrupt
+
+
+def speak(text: str, voice: PiperVoice):
+    buf = io.BytesIO()
+    with wave.open(buf, 'wb') as wav:
+        voice.synthesize_wav(text, wav)
+    buf.seek(0)
+    proc = subprocess.Popen(
+        [FFPLAY, "-nodisp", "-autoexit", "-"],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    proc.communicate(input=buf.read())
+
+
 def main():
+    print("Loading voice...")
+    voice = PiperVoice.load(PIPER_MODEL)
+    face.start_face()
     print("Echo is here.\n")
     conversations = load_memory()
 
     while True:
         try:
-            user_input = input("You: ").strip()
-        except (EOFError, KeyboardInterrupt):
+            face.idle()
+            user_input = listen()
+            if not user_input:
+                continue
+        except KeyboardInterrupt:
             print("\nGoodbye.")
             break
 
-        if not user_input:
-            continue
-
         if user_input.lower() in ("quit", "exit", "bye"):
             print("Echo: Talk later.")
+            speak("Talk later.", voice)
             break
 
+        face.thinking()
         response = handle_turn(user_input, conversations)
         print(f"Echo: {response}\n")
+        face.talking()
+        speak(response, voice)
+        face.idle()
 
         conversations = add_exchange(conversations, user_input, response)
         save_memory(conversations)
