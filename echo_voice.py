@@ -9,6 +9,7 @@ import json
 import os
 import sys
 import wave
+import socket
 import subprocess
 import requests
 import speech_recognition as sr
@@ -27,6 +28,16 @@ MAX_HISTORY   = 20
 MIC_CARD      = 3   # Fifine Microphone
 SPEAKER_CARD  = 2   # USB AUDIO
 PIPER_MODEL   = os.path.join(os.path.dirname(os.path.abspath(__file__)), "en_US-lessac-medium.onnx")
+FACE_HOST     = "192.168.68.65"   # PC IP
+FACE_PORT     = 5005
+
+_udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+def set_face(state: str):
+    try:
+        _udp.sendto(state.encode(), (FACE_HOST, FACE_PORT))
+    except Exception:
+        pass
 
 
 # ── Identity ───────────────────────────────────────────────────────────────────
@@ -161,9 +172,11 @@ def main():
 
     while True:
         try:
+            set_face("listening")
             user_input = listen()
         except KeyboardInterrupt:
             print("\nGoodbye.")
+            set_face("idle")
             speak("Talk later.", voice)
             break
 
@@ -172,12 +185,16 @@ def main():
 
         if user_input.lower() in ("quit", "exit", "bye"):
             print("Echo: Talk later.")
+            set_face("idle")
             speak("Talk later.", voice)
             break
 
+        set_face("thinking")
         response = handle_turn(user_input, conversations)
         print(f"Echo: {response}\n")
+        set_face("talking")
         speak(response, voice)
+        set_face("idle")
 
         conversations = add_exchange(conversations, user_input, response)
         save_memory(conversations)
