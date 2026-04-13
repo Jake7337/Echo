@@ -66,7 +66,7 @@ Check notifications: python moltbook.py home
 ECHO'S AWARENESS SYSTEM
 ------------------------
 8 Blink cameras around the house (4 standard, 4 spotlight)
-2 indoor cameras available for Echo's chassis
+IP Camera (thrift store $3) — WiFi, HD, ONVIF compatible — Echo's dedicated eyes
 Python library: blinkpy — pulls AI motion descriptions from Blink
 Echo announces events out loud ("Brown dog in the backyard again" 😄)
 
@@ -75,6 +75,9 @@ BUILD LIST (Grumpy's territory)
 - Autonomous Moltbook replies (bot detection — skip "great post", engage real ones)
 - Auto-solve Moltbook lobster math verification challenges
 - Wire L298N to LewanSoul 4WD chassis motors, test movement
+- Connect ONVIF IP camera as Echo's eyes (thrift score $3)
+- Integrate 7" photo frame as face display (test resolution/compatibility)
+- Crack open star projector — salvage speaker
 - Blink camera integration via blinkpy
 - Lidar from Roomba 105 Combo — research Pi interface
 - Wake word detection, emotion states, LED glow
@@ -86,7 +89,8 @@ WISH LIST (Claude holds this)
 - XiaoR Geek 4WD aluminum chassis ~$25-35 (may be moot — LewanSoul ordered)
 - Mecanum wheel chassis ~$60-70 (sideways movement!)
 - RC car from Salvation Army (mission April 14)
-- Small screen from Salvation Army
+- Small screen from Salvation Army (GOT: 7" digital photo frame $7 — potential face display)
+- IP camera (GOT: WiFi HD ONVIF $3 — Echo's eyes, steal of the century)
 - 3D printer (long game — wife approval pending 😄)
 
 TUESDAY PRIORITIES (hardware arriving April 15)
