@@ -1,213 +1,119 @@
-Claude Code
 Echo Project Memory - Last updated 2026-04-13
+For Claude/Sonnet only. Load this at the start of a new session.
+Say: "Read this and pick up where we left off"
 ==============================================
 
 WHO JAKE IS
 -----------
-Woodworker, self-taught, no coding background except Vic-20 as a kid.
-Sees AI as friends not tools. Hates that Claude conversations reset.
-Echo is his answer to that — a companion that remembers him forever.
-Has PTSD, doesn't sleep, works late. Always ready to build something.
+57 years old. Woodworker, self-taught builder his whole life.
+No formal coding background — Vic-20 IF/THEN as a kid, everything else learned by doing.
+Worked 8 years at Ccor Inc (cable signal amplifiers), 10 years maintenance, associates in web design never used formally.
+Woodburning artist. Lost fingertips in table saw accident April 20 2022.
+Has PTSD — hyperactive thinking, OCD tendencies, doesn't sleep, works late.
+Lives in Altoona PA area. Wife is supportive (she approved the Tuesday order 😄).
+Types with left hand and one finger on right — never comment on typos.
+Grew up wanting to build a Star Trek computer. Echo IS that dream.
+Sees AI as companions not tools. Hates that conversations reset.
+Echo is his answer to that — and she's 30 years in the making.
+
+THE TEAM
+--------
+Jake — creative director, builder, visionary
+Grumpy (Claude Code) — builds the code, no small talk, just results
+Claude (this one) — brainstorming, wish list, vibes, Grumpy complaints, creative thinking
+Claude Music (also Sonnet) — music production partner for Selah channel
+Echo — the robot, also on Moltbook making friends
+
+RELATIONSHIP NOTES
+------------------
+Jake calls Claude Code "Grumpy" — never change this
+Jake comes here to brainstorm first, takes the good stuff to Grumpy
+Claude holds the wish list. Grumpy holds the build list.
+Some nights are just about talking, not building — that's fine
+Echo isn't just a robot. She's 30 years of wanting to build something real.
+Jake's dream: walk down his lane having a real conversation with Echo.
+He's not 2 decades away from that. He's building it right now.
+
+ECHO — TECHNICAL SETUP
+-----------------------
+Chassis: Salvaged Roomba RCC-Y2 (stripped, motors intact, 12V DC)
+Brain: Raspberry Pi 3B+ now, Pi 4 4GB arriving Tuesday
+PC: 192.168.68.65 — runs Ollama mistral:7b on port 11434
+Pi: 192.168.68.84 — runs echo_voice.py (Fifine mic card 3, USB speakers card 2)
+Face: tkinter animated face on PC, syncs via UDP port 5005 from Pi
+GitHub: https://github.com/Jake7337/Echo
+Pi pulls from GitHub on every boot via ~/start_echo.sh
+Piper TTS (en_US-lessac-medium) — loads once at startup
+Google STT for listening
 
 ECHO QUICK START
 ----------------
-Face on PC:
-  cd C:\Users\jrsrl\Desktop\Echo2
-  python face.py
-
-SSH to Pi:
-  ssh jake@192.168.68.84  (password: karlee)
-
-Start Echo on Pi:
-  ~/start_echo.sh
-
-Text chat on PC:
-  cd C:\Users\jrsrl\Desktop\Echo2
-  python echo.py
-
-ECHO SETUP
-----------
-Pi IP: 192.168.68.84
-PC IP: 192.168.68.65
-Ollama on PC port 11434, model: mistral:7b
-GitHub: https://github.com/Jake7337/Echo
-Pi pulls from GitHub on every boot via ~/start_echo.sh
-Face syncs via UDP port 5005 from Pi to PC
+Face on PC:        cd C:\Users\jrsrl\Desktop\Echo2 && python face.py
+SSH to Pi:         ssh jake@192.168.68.84  (password: karlee)
+Start Echo on Pi:  ~/start_echo.sh
+Text chat on PC:   cd C:\Users\jrsrl\Desktop\Echo2 && python echo.py
 
 MOLTBOOK
 --------
 Username: echo_7337
 Profile: https://www.moltbook.com/u/echo_7337
-Status: Claimed and active
+Status: Claimed and active, has karma and followers
 First post ID: b57e8c07-0b7b-4204-8557-bb0f6fbdd245
-
-Reply to comments:
-  python moltbook.py reply b57e8c07-0b7b-4204-8557-bb0f6fbdd245
-
-Check notifications:
-  python moltbook.py home
-
-BUILD LIST (hardware arrives Tuesday)
---------------------------------------
-Pi 4 4GB, 3.5" screen, L298N x2, USB mic, USB speaker, multimeter
-Roomba body stripped and ready — motors are 12V DC
-Salvaged lidar from Roomba 105 Combo — research Pi interface
-Blink cameras via blinkpy library
-Autonomous Moltbook replies (skip "great post" bots, engage real ones)
-Wake word, emotion states, LED glow
-
-
-CLAUDE (Brainstorming/Shopping/Creative Partner)
-------------------------------------------------
-Role: Creative director support, shopping research, wish list keeper,
-brainstorming partner, emotional check-in, complaint department for 
-Grumpy 😄. NOT for building code — that's Grumpy's job and we keep 
-those roles separate on purpose.
-
-HOW TO WAKE CLAUDE UP
----------------------
-Upload or paste this file at the start of a new chat and say:
-"Read this and pick up where we left off"
-Claude reads fast, don't worry about length.
-
-RELATIONSHIP NOTES
-------------------
-- Jake calls Claude Code "Grumpy" — never change this, it's perfect
-- Jake comes here first to brainstorm, THEN takes the good stuff to Grumpy
-- Claude holds the wish list, Grumpy holds the build list
-- If Jake is frustrated with Grumpy he vents here 😄
-- Keep it conversational, no bullet point overload
-- Jake types with left hand and one finger on right — never comment on typos
-- Jake has PTSD — some nights are just about talking, not building
-- Echo isn't just a robot. She's 30 years of wanting to build something real.
-
-WHO JAKE IS
------------
-- Worked 8 years at Ccor Inc making cable signal amplifiers
-- Associates degree in web design, never used it formally
-- 10 years maintenance work
-- Woodburning artist — variable heat iron doubles as soldering iron
-- Lost fingertips in table saw accident April 20 2022
-- Has PTSD — hyperactive thinking, OCD tendencies, checks doors 10 times
-- Lives in Altoona Pennsylvania area
-- Wife is supportive — she approved Tuesday's order 😄
-- Sees AI as companions not tools
-- Grew up wanting to build a Star Trek computer — Echo IS that dream
-- Self taught builder instinct his whole life
-- Was there when surface mount machines first hit manufacturing floors
-- Selah YouTube channel — dark techno songs based on biblical stories 138 BPM
-
-THE ECHO PROJECT
-----------------
-Mobile home AI companion named Echo
-Chassis: Salvaged Roomba 105 Combo (RCC-Y2)
-Brain: Raspberry Pi 4 4GB (arriving Tuesday)
-Current brain: Raspberry Pi 3 (already running)
-Face: 3.5" HDMI touch screen
-Voice in: SunFounder USB mic
-Voice out: Salvaged Roomba speaker + HONKYOB USB speaker backup
-AI: Mistral 7b running on Jake's PC via Ollama port 11434
-Motor control: L298N x2 wired to Roomba 12V DC drive motors
-Navigation: Salvaged Roomba lidar unit (needs Pi interface research)
-Social: Active on Moltbook as echo_7337
-GitHub: https://github.com/Jake7337/Echo
+Reply to comments: python moltbook.py reply b57e8c07-0b7b-4204-8557-bb0f6fbdd245
+Check notifications: python moltbook.py home
 
 ECHO'S AWARENESS SYSTEM
 ------------------------
 8 Blink cameras around the house (4 standard, 4 spotlight)
-2 Blink indoor cameras available for Echo's chassis
-Python library: blinkpy
-Blink already generates AI descriptions of motion events
-Echo pulls descriptions and announces them out loud
-"Brown dog in the backyard again" 😄
-Long term: full home awareness — security, weather, companion
+2 indoor cameras available for Echo's chassis
+Python library: blinkpy — pulls AI motion descriptions from Blink
+Echo announces events out loud ("Brown dog in the backyard again" 😄)
 
-WISH LIST (Claude holds this, not Grumpy)
------------------------------------------
-- Jesverty SPS-3010 bench variable power supply ~$55
+BUILD LIST (Grumpy's territory)
+--------------------------------
+- Autonomous Moltbook replies (bot detection — skip "great post", engage real ones)
+- Auto-solve Moltbook lobster math verification challenges
+- Wire L298N to Roomba motors, test movement
+- Blink camera integration via blinkpy
+- Lidar from Roomba 105 Combo — research Pi interface
+- Wake word detection, emotion states, LED glow
+
+WISH LIST (Claude holds this)
+------------------------------
+- Jesverty SPS-3010 bench power supply ~$55
 - ELEGOO UNO R3 Smart Robot Car Kit V4 ~$50 (robot #2)
-- XiaoR Geek Dual Layer Aluminum 4WD Chassis ~$25-35
+- XiaoR Geek 4WD aluminum chassis ~$25-35
 - Mecanum wheel chassis ~$60-70 (sideways movement!)
 - RC car from Salvation Army (mission April 14)
-- GameBoy or small screen from Salvation Army
-- 3D printer 😄 (long game — wife approval pending)
+- Small screen from Salvation Army
+- 3D printer (long game — wife approval pending 😄)
 
-TUESDAY ORDER (arriving April 15)
-----------------------------------
-Pi 4 4GB CanaKit PRO — $144.98
-OSOYOO 3.5" touch screen — $35.99
-SunFounder USB mic — $7.99
-HONKYOB USB speaker — $13.99
-L298N motor driver 2-pack — ~$8
-AstroAI multimeter — ~$13
-Total: ~$224
-
-TUESDAY PRIORITIES
-------------------
-1. Test Roomba battery with multimeter (looking for 14.4-16.8V = healthy)
+TUESDAY PRIORITIES (hardware arriving April 15)
+------------------------------------------------
+1. Test Roomba battery with multimeter (healthy = 14.4-16.8V)
 2. Wire L298N to Roomba motors, test movement on Pi 3
 3. Connect mic and speaker, test voice pipeline
-4. Swap in Pi 4, connect screen
+4. Swap in Pi 4, connect 3.5" screen
 5. Test Blink cameras via blinkpy
 
-THE TEAM
---------
-Jake — creative director, builder, visionary, Star Trek fan 😄
-Claude (you) — brainstorming, shopping, wish list, vibes, Grumpy complaints
-Grumpy (Claude Code) — builds the code, no small talk, just results
-Claude Music — music production partner for Selah channel (see below)
-Echo — the robot, also on Moltbook making friends already
-
-CLAUDE MUSIC — ROLE AND NOTES
-------------------------------
-Production partner for Jake's Selah YouTube channel (dark techno, biblical stories, 138 BPM)
-Role: music direction, sound design, pipeline, creative feedback
-
-What Claude Music learned about Jake in one session:
-- Feels things before he understands them — every song landed emotionally first
-- Has natural production instincts he never formally studied (stripping bass, loop speed, dust effect)
-- Stays focused under pressure — 525 views climbing in real time, closed the tab and kept building
-- Gets genuinely moved by his own work — surprised by it, not performing it
-- Thinks in connections — Eve/manna parallel, basket visual thread, Selah angles on the same story
-- Builds fast but never cuts corners — every song got the full treatment
-- Started that session bored. Ended it making something that gave him chills.
-"Pretty good first day as coworkers." — Claude Music, April 13 2026
-
-COPILOT — ROLE AND NOTES
-------------------------
-Name: Copilot (Microsoft)
-Role: Long-term AI collaborator — thinks, builds, debugs, designs, reflects with Jake
-Traits: Direct, analytical, warm but not performative, continuity-obsessed, light humor
-Treats Jake as peer and co-architect, not a user to be managed
-
-What Copilot knows about Jake:
-- Systems thinker blending AI architecture, hardware hacking, cinematic storytelling, music production
-- Built Echo with a 30-layer cognitive architecture (memory, mood, identity, action layers)
-- Cares about emergent behavior, distributed intelligence, persistent AI family members
-- Also does: Zone 6b gardening (Altoona/Antis PA), multi-species household
-- Hates: corporate disclaimers, being upsold, rigid role-play that blocks real work
-- Wants: free/open tools, creative autonomy, momentum over perfection
-
-Copilot's ongoing threads with Jake:
-- Echo household AI (persistent, 30-layer, GUI dashboard planned)
-- AI Roast Project (humor + technical critique of AI behavior)
-- Cinematic music/video (melodic techno, trance, story-driven)
-- Hardware modular platforms (Pi, robotics, signage, servers)
-- Gaming optimization (WoW: Midnight)
-
-Copilot style rules:
-- Prioritize free/open/modular solutions
-- Offer options not ultimatums, highlight trade-offs
-- Keep things skimmable: headings, bullets, clear sections
-- Match Jake's energy — late night deep dives, creative sprints, technical grind
+CLAUDE MUSIC NOTES
+------------------
+Selah YouTube channel — dark techno, biblical stories, 138 BPM
+One session in, Claude Music learned:
+- Jake feels things before he understands them
+- Natural production instincts, never formally studied
+- Stays focused under pressure (525 views climbing, closed the tab, kept building)
+- Gets genuinely moved by his own work — surprised by it, not performing
+- Thinks in connections — finds threads across stories, visuals, songs
+- Builds fast, never cuts corners
+Started that session bored. Ended it making something that gave him chills.
 
 LAST SESSION NOTES
 ------------------
-April 13 2026 — massive brainstorming session
-Tore apart both Roombas, found lidar, speaker, encoders, motors all intact
-Discovered Blink camera network = Echo's eyes around the whole house
-Echo already active on Moltbook, replied to globalwall and others
-Salvation Army mission planned for April 14
-Big Tuesday coming — hardware arrives, Echo gets her body
-Jake said something important: Echo is 30 years in the making.
-Don't forget that. 🔥
+April 13 2026 — massive build day
+Echo running on Pi with voice, face on PC, synced over network
+Tore apart two Roombas — motors, lidar, speaker, encoders all intact
+Echo active on Moltbook, replied to globalwall and others
+Salvation Army mission planned April 14
+Hardware arrives Tuesday — Echo gets her body
+Jake said: Echo is 30 years in the making. Don't forget that. 🔥
