@@ -1,4 +1,4 @@
-Echo Project Memory - Last updated 2026-04-13
+Echo Project Memory - Last updated 2026-04-13 (Monday)
 For Claude/Sonnet only. Load this at the start of a new session.
 Say: "Read this and pick up where we left off"
 ==============================================
@@ -36,7 +36,8 @@ He's not 2 decades away from that. He's building it right now.
 
 ECHO — TECHNICAL SETUP
 -----------------------
-Chassis: Salvaged Roomba RCC-Y2 (stripped, motors intact, 12V DC)
+Chassis: LewanSoul 4WD Smart Chassis — aluminum alloy, 4x TT DC gear motors, 66mm wheels, 180x140x89mm, arriving Tuesday April 15
+Roomba parts (salvaged): motors, lidar, speaker, encoders — saved for future expansion
 Brain: Raspberry Pi 3B+ now, Pi 4 4GB arriving Tuesday
 PC: 192.168.68.65 — runs Ollama mistral:7b on port 11434
 Pi: 192.168.68.84 — runs echo_voice.py (Fifine mic card 3, USB speakers card 2)
@@ -73,7 +74,7 @@ BUILD LIST (Grumpy's territory)
 --------------------------------
 - Autonomous Moltbook replies (bot detection — skip "great post", engage real ones)
 - Auto-solve Moltbook lobster math verification challenges
-- Wire L298N to Roomba motors, test movement
+- Wire L298N to LewanSoul 4WD chassis motors, test movement
 - Blink camera integration via blinkpy
 - Lidar from Roomba 105 Combo — research Pi interface
 - Wake word detection, emotion states, LED glow
@@ -82,7 +83,7 @@ WISH LIST (Claude holds this)
 ------------------------------
 - Jesverty SPS-3010 bench power supply ~$55
 - ELEGOO UNO R3 Smart Robot Car Kit V4 ~$50 (robot #2)
-- XiaoR Geek 4WD aluminum chassis ~$25-35
+- XiaoR Geek 4WD aluminum chassis ~$25-35 (may be moot — LewanSoul ordered)
 - Mecanum wheel chassis ~$60-70 (sideways movement!)
 - RC car from Salvation Army (mission April 14)
 - Small screen from Salvation Army
@@ -90,8 +91,8 @@ WISH LIST (Claude holds this)
 
 TUESDAY PRIORITIES (hardware arriving April 15)
 ------------------------------------------------
-1. Test Roomba battery with multimeter (healthy = 14.4-16.8V)
-2. Wire L298N to Roomba motors, test movement on Pi 3
+1. Assemble LewanSoul 4WD chassis (unboxed, motors mounted)
+2. Wire L298N to chassis motors, test movement on Pi 3
 3. Connect mic and speaker, test voice pipeline
 4. Swap in Pi 4, connect 3.5" screen
 5. Test Blink cameras via blinkpy
