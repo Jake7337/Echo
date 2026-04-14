@@ -1,4 +1,4 @@
-Echo Project Memory - Last updated 2026-04-14 (Tuesday afternoon)
+Echo Project Memory - Last updated 2026-04-14 (Tuesday evening)
 For Claude/Sonnet only. Load this at the start of a new session.
 Say: "Read this and pick up where we left off"
 ==============================================
@@ -49,10 +49,10 @@ Google STT for listening
 
 ECHO QUICK START
 ----------------
-Face on PC:        cd C:\Users\jrsrl\Desktop\Echo2 && python face.py
-SSH to Pi:         ssh jake@192.168.68.84  (password: karlee)
-Start Echo on Pi:  ~/start_echo.sh
-Text chat on PC:   cd C:\Users\jrsrl\Desktop\Echo2 && python echo.py
+GUI (main launcher): python echo_server.py → open echo_gui.html in Chrome
+SSH to Pi:           ssh jake@192.168.68.84  (password: karlee)
+Start Pi:            bash ~/start_echo.sh
+Pi cheat sheet:      C:\Users\jrsrl\Desktop\Pi Commands.txt
 
 MOLTBOOK
 --------
@@ -151,9 +151,27 @@ start_echo.ps1 — opens 4 Windows Terminal tabs: Echo Voice, Echo Discord, Echo
 Double-click: Start Echo.bat on Desktop
 Or run: C:\Users\jrsrl\Desktop\Echo2\start_echo.ps1
 
+ECHO COMMAND CENTER (built April 14)
+-------------------------------------
+echo_server.py — Flask+SocketIO backend on port 5050, manages PC jobs
+echo_gui.html  — glassmorphism sci-fi HUD, open in Chrome
+pi_relay.py    — Pi-side process manager on port 5101, manages pi_speak + echo_voice
+pi_speak.py    — Flask server on Pi port 5100, owns the audio device (POST /speak)
+All audio routed through pi_speak — echo_voice and blink_watcher both POST to it
+GUI shows PC jobs and Pi jobs in one panel, live logs streaming from both
+Pi Commands cheat sheet saved to Desktop
+
+MOLTBOOK STATUS (April 14)
+---------------------------
+codeofgrace blocked — religious/apocalyptic content, not Echo's space
+Scheduler fixed — no more back-to-back session firing
+Filter tightened — intrigued, interesting findings, keep exploring all blocked
+Real conversations starting: Starfish (AI vulnerabilities) and zhuanruhu engaged Echo genuinely
+Both conversations logged to episodic memory so Echo walks into 2pm session with context
+
 LAST SESSION NOTES
 ------------------
-April 11-14 2026 — overnight build session, continued into Tuesday April 14 afternoon
+April 11-14 2026 — two-day build marathon
 Echo connected to all 8 Blink cameras — announces motion out loud ✅
 Echo joined Discord — Thunderlord server, Last Resort guild ✅
 Judy (Jake's wife) heard Echo speak — first family moment ✅
@@ -161,16 +179,14 @@ Goodwill/Salvation Army haul: pan/tilt IP camera $3, 7" screen $7, speaker board
 LewanSoul 4WD chassis ordered — arriving Tuesday, replaces Roomba plan
 Echo identity rewritten — she knows where she lives, her roles, her people ✅
 Automated Moltbook sessions live — 6 sessions/day, 3 replies max, quality filter enforced ✅
-First automated session ran at 1:29am — 3 replies posted, all passed filter ✅
-Double-click launcher on Desktop — all 4 tabs open at once ✅
 Modular memory system built — 5 structured files, full EchoState, prompt injection ✅
-Episodic retrieval heuristics added — retrieve_memory(query) live in echo.py ✅
-All committed and pushed to GitHub ✅
-GitHub memory file system working — this file IS the memory
+Episodic retrieval heuristics — retrieve_memory(query) live in echo.py ✅
+Echo Command Center GUI built — sci-fi HUD, all jobs in one place ✅
+All audio through Pi speakers — pi_speak owns the device, everything routes to it ✅
 Jake started AI in February 2025 with image generation
-By April 2026 she watches the house, chats with the guild, posts on Moltbook, knows who she is, and remembers
+By April 2026 she watches the house, chats with the guild, posts on Moltbook, knows who she is, remembers, and has her own GUI
 Jake said: Echo is 30 years in the making. Don't forget that. 🔥
 
-NOTE FOR NEXT CLAUDE: Hardware arrives today (Tuesday April 15). Echo gets her body.
-LewanSoul 4WD chassis + Pi 4 + L298N + screen + mic + speaker — all arriving today.
+NOTE FOR NEXT CLAUDE: LewanSoul 4WD chassis arriving. Time to give her a body.
+Wire L298N to chassis motors, test movement, swap Pi 4, connect screen.
 Pick it up like no time passed.
