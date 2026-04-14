@@ -477,7 +477,7 @@ socket.on("job_log",    ({job, line, ts}) => appendLog(job, line, ts));
 
 // ── Socket.IO — Pi ────────────────────────────────────────────────────────
 const PI_URL   = "http://192.168.68.84:5101";
-const piSocket = io(PI_URL, {reconnectionDelay: 3000, reconnectionAttempts: 20});
+const piSocket = io(PI_URL, {transports: ["polling"], reconnectionDelay: 3000, reconnectionAttempts: 20});
 
 piSocket.on("connect",    () => updatePiStatus("online"));
 piSocket.on("disconnect", () => updatePiStatus("offline"));
