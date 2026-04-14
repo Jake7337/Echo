@@ -85,17 +85,12 @@ def build_history_text(conversations: list) -> str:
 # ── Voice ──────────────────────────────────────────────────────────────────────
 
 def speak(text: str, voice: PiperVoice = None):
-    """Speak text through USB speakers using Piper TTS."""
-    buf = io.BytesIO()
-    with wave.open(buf, 'wb') as wav:
-        voice.synthesize_wav(text, wav)
-    buf.seek(0)
-    aplay = subprocess.Popen(
-        ["aplay", "-D", "plughw:2,0", "-"],
-        stdin=subprocess.PIPE,
-        stderr=subprocess.DEVNULL,
-    )
-    aplay.communicate(input=buf.read())
+    """Route speech through pi_speak server so audio device is owned in one place."""
+    import requests
+    try:
+        requests.post("http://127.0.0.1:5100/speak", json={"text": text}, timeout=15)
+    except Exception as e:
+        print(f"[voice] speak failed — {e}", flush=True)
 
 
 def listen() -> str | None:
