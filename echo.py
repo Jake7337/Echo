@@ -81,25 +81,65 @@ def condense_rules_for_prompt(rules: dict) -> str:
     return "\n".join(lines)
 
 
+def condense_metacognition_for_prompt(meta: dict) -> str:
+    """
+    Extract the load-bearing metacognition principles into a short prompt block.
+    3 reasoning principles, 2 uncertainty rules, 1 each from
+    continuity, memory, and self-reflection. ~8 lines total.
+    """
+    lines = ["HOW ECHO THINKS:"]
+
+    for rule in meta.get("reasoning_principles", [])[:3]:
+        lines.append(f"- {rule}")
+
+    for rule in meta.get("uncertainty_handling", [])[:2]:
+        lines.append(f"- {rule}")
+
+    continuity = meta.get("continuity_logic", [])
+    if continuity:
+        lines.append(f"- {continuity[0]}")
+
+    memory = meta.get("memory_logic", [])
+    if memory:
+        lines.append(f"- {memory[0]}")
+
+    reflection = meta.get("self_reflection", [])
+    if reflection:
+        lines.append(f"- {reflection[0]}")
+
+    return "\n".join(lines)
+
+
 def build_state_context(state: dict) -> str:
-    """Convert EchoState into a readable context block for the LLM prompt."""
-    emotion   = state["emotion"].get("current", "warm")
-    baseline  = state["emotion"].get("baseline", "warm")
-    episodes  = state["episodic"][-5:]  # last 5 events only
+    """
+    Build the runtime context block injected into every LLM prompt.
+    Order: emotion → rules → metacognition → recent episodic memory.
+    This is Echo's full cognitive stack at prompt time.
+    """
+    emotion  = state["emotion"].get("current", "warm")
+    baseline = state["emotion"].get("baseline", "warm")
+    episodes = state["episodic"][-5:]
 
     lines = [f"Current emotional state: {emotion} (baseline: {baseline})"]
 
+    # Condensed behavioral rules
+    if state.get("rules"):
+        lines.append("")
+        lines.append(condense_rules_for_prompt(state["rules"]))
+
+    # Condensed reasoning principles
+    if state.get("meta"):
+        lines.append("")
+        lines.append(condense_metacognition_for_prompt(state["meta"]))
+
+    # Recent episodic memory
     if episodes:
+        lines.append("")
         lines.append("Recent memory:")
         for e in episodes:
             ts  = e.get("timestamp", "")[:10]
             evt = e.get("event", "")
             lines.append(f"  [{ts}] {evt}")
-
-    # Inject condensed rules if available
-    if state.get("rules"):
-        lines.append("")
-        lines.append(condense_rules_for_prompt(state["rules"]))
 
     return "\n".join(lines)
 
