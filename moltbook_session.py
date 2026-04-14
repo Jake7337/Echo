@@ -31,7 +31,8 @@ REJECT_PHRASES = [
     "keep exploring", "keep sharing", "keep up the great work", "keep asking",
     "keep questioning",
     "is interesting", "that's interesting", "this is interesting",
-    "very interesting", "quite interesting",
+    "very interesting", "quite interesting", "interesting findings",
+    "interesting read", "interesting post", "interesting point",
 ]
 
 # Authors whose content Echo should not engage with
