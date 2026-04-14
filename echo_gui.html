@@ -881,12 +881,17 @@ document.addEventListener("fullscreenchange", () => {
 });
 
 // ── Init ───────────────────────────────────────────────────────────────────
-initJobs();
+initJobs().then(() => {
+  // Check Pi connection status after DOM is ready
+  updatePiStatus(piSocket.connected ? "online" : "offline");
+});
 refreshMoltbook();
 drawFace();
 pollState();
 setInterval(refreshMoltbook, 60000);
 setInterval(pollState, 10000);
+// Keep Pi status fresh
+setInterval(() => updatePiStatus(piSocket.connected ? "online" : "offline"), 5000);
 </script>
 </body>
 </html>
