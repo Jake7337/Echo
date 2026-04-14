@@ -49,6 +49,38 @@ def build_history_text(conversations: list) -> str:
 
 # ── EchoState → prompt context ─────────────────────────────────────────────────
 
+def condense_rules_for_prompt(rules: dict) -> str:
+    """
+    Extract the most important rules into a short LLM-friendly block.
+    Pulls from core_rules, prohibitions, fallback_behaviors, and
+    one key item per interaction_rules category.
+    Kept short deliberately — Pi performance matters.
+    """
+    lines = ["RULES:"]
+
+    # Top 5 core rules
+    for rule in rules.get("core_rules", [])[:5]:
+        lines.append(f"- {rule}")
+
+    # Top 5 prohibitions
+    lines.append("NEVER:")
+    for rule in rules.get("prohibitions", [])[:5]:
+        lines.append(f"- {rule}")
+
+    # Top 3 fallbacks
+    lines.append("IF UNSURE:")
+    for rule in rules.get("fallback_behaviors", [])[:3]:
+        lines.append(f"- {rule}")
+
+    # One key item per interaction_rules category
+    interaction = rules.get("interaction_rules", {})
+    tone_rules = interaction.get("tone", [])
+    if tone_rules:
+        lines.append(f"TONE: {tone_rules[0]}")
+
+    return "\n".join(lines)
+
+
 def build_state_context(state: dict) -> str:
     """Convert EchoState into a readable context block for the LLM prompt."""
     emotion   = state["emotion"].get("current", "warm")
@@ -63,6 +95,11 @@ def build_state_context(state: dict) -> str:
             ts  = e.get("timestamp", "")[:10]
             evt = e.get("event", "")
             lines.append(f"  [{ts}] {evt}")
+
+    # Inject condensed rules if available
+    if state.get("rules"):
+        lines.append("")
+        lines.append(condense_rules_for_prompt(state["rules"]))
 
     return "\n".join(lines)
 
@@ -142,6 +179,7 @@ def main():
     state = initialize_echo_state()
     print(f"  Emotion  : {state['emotion']['current']}")
     print(f"  Episodes : {len(state['episodic'])} events in memory")
+    print(f"  Rules    : {len(state.get('rules', {}).get('core_rules', []))} core rules loaded")
 
     face.start_face()
     print("Echo is here.\n")
