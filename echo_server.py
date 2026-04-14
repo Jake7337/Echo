@@ -190,6 +190,12 @@ def api_chat():
     except Exception as e:
         reply = f"(Echo couldn't respond — {e})"
 
+    # Speak reply through Pi speakers
+    try:
+        requests.post("http://192.168.68.84:5100/speak", json={"text": reply}, timeout=5)
+    except Exception:
+        pass
+
     return jsonify({"reply": reply})
 
 
