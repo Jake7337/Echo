@@ -475,14 +475,21 @@ socket.on("disconnect", () => setOrb("error"));
 socket.on("job_status", ({job, status}) => updateJobDot(job, status));
 socket.on("job_log",    ({job, line, ts}) => appendLog(job, line, ts));
 
-// ── Socket.IO — Pi ────────────────────────────────────────────────────────
-const PI_URL   = "http://192.168.68.84:5101";
-const piSocket = io(PI_URL, {transports: ["polling"], reconnectionDelay: 3000, reconnectionAttempts: 20});
+// ── Pi — HTTP polling (no Socket.IO) ─────────────────────────────────────
+const PI_URL = "http://192.168.68.84:5101";
 
-piSocket.on("connect",    () => updatePiStatus("online"));
-piSocket.on("disconnect", () => updatePiStatus("offline"));
-piSocket.on("pi_status",  ({job, status}) => updateJobDot("pi_" + job, status));
-piSocket.on("pi_log",     ({job, line, ts}) => appendLog("pi_" + job, line, ts));
+async function pollPiStatus() {
+  try {
+    const resp = await fetch(`${PI_URL}/api/jobs`, {signal: AbortSignal.timeout(3000)});
+    const jobs = await resp.json();
+    updatePiStatus("online");
+    for (const [id, job] of Object.entries(jobs)) {
+      updateJobDot("pi_" + id, job.status);
+    }
+  } catch(e) {
+    updatePiStatus("offline");
+  }
+}
 
 // ── Orb state ──────────────────────────────────────────────────────────────
 const ORB_LABELS = { idle:"idle", talking:"talking", thinking:"thinking", error:"offline", waking:"waking up" };
@@ -881,17 +888,14 @@ document.addEventListener("fullscreenchange", () => {
 });
 
 // ── Init ───────────────────────────────────────────────────────────────────
-initJobs().then(() => {
-  // Check Pi connection status after DOM is ready
-  updatePiStatus(piSocket.connected ? "online" : "offline");
-});
+initJobs();
 refreshMoltbook();
 drawFace();
 pollState();
+pollPiStatus();
 setInterval(refreshMoltbook, 60000);
 setInterval(pollState, 10000);
-// Keep Pi status fresh
-setInterval(() => updatePiStatus(piSocket.connected ? "online" : "offline"), 5000);
+setInterval(pollPiStatus, 5000);
 </script>
 </body>
 </html>
