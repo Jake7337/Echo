@@ -4,38 +4,27 @@ Watches Blink cameras for motion and has Echo announce it out loud.
 Run this alongside echo_voice.py or on its own.
 """
 
-import io
 import json
 import os
 import time
-import wave
-import subprocess
 import asyncio
+import requests
 from datetime import datetime
 from blinkpy.blinkpy import Blink
 from blinkpy.auth import Auth
-from piper import PiperVoice
 
 CREDS_FILE   = os.path.join(os.path.dirname(__file__), "blink_creds.json")
-PIPER_MODEL  = os.path.join(os.path.dirname(__file__), "en_US-lessac-medium.onnx")
-FFPLAY       = r"C:\Users\jrsrl\ffmpeg\ffmpeg-8.0.1-essentials_build\bin\ffplay.exe"
-POLL_SECONDS = 30  # how often to check for new motion
+POLL_SECONDS = 30
+PI_SPEAK_URL = "http://192.168.68.84:5100/speak"
 
-# ── Voice ──────────────────────────────────────────────────────────────────────
+# ── Voice — routed to Pi speakers ─────────────────────────────────────────────
 
-def speak(text: str, voice: PiperVoice):
-    print(f"Echo: {text}")
-    buf = io.BytesIO()
-    with wave.open(buf, 'wb') as wav:
-        voice.synthesize_wav(text, wav)
-    buf.seek(0)
-    proc = subprocess.Popen(
-        [FFPLAY, "-nodisp", "-autoexit", "-"],
-        stdin=subprocess.PIPE,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
-    proc.communicate(input=buf.read())
+def speak(text: str):
+    print(f"Echo: {text}", flush=True)
+    try:
+        requests.post(PI_SPEAK_URL, json={"text": text}, timeout=10)
+    except Exception as e:
+        print(f"[blink] speak failed — Pi unreachable? {e}", flush=True)
 
 # ── Blink ──────────────────────────────────────────────────────────────────────
 
@@ -83,7 +72,7 @@ async def setup_blink():
 
     return blink
 
-async def watch(blink: Blink, voice: PiperVoice):
+async def watch(blink: Blink):
     seen = set()
 
     print("Echo is watching the cameras...\n")
@@ -102,18 +91,14 @@ async def watch(blink: Blink, voice: PiperVoice):
             if new_thumb and new_thumb != last_thumbnails.get(name):
                 last_thumbnails[name] = new_thumb
                 print(f"Motion on {name}", flush=True)
-                speak(f"Motion detected on {name}.", voice)
+                speak(f"Motion detected on {name}.")
 
 # ── Main ───────────────────────────────────────────────────────────────────────
 
 async def main():
-    print("Loading voice...")
-    voice = PiperVoice.load(PIPER_MODEL)
-
     print("Connecting to Blink...")
     blink = await setup_blink()
-
-    await watch(blink, voice)
+    await watch(blink)
 
 if __name__ == "__main__":
     asyncio.run(main())
