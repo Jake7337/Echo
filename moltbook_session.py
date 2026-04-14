@@ -6,10 +6,13 @@ Max 3 replies per session. Quality filter enforced.
 Prints a report after each session.
 """
 
+import sys
 import json
 import os
 import time
 import requests
+
+sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 from datetime import datetime
 
 OLLAMA_URL   = "http://localhost:11434/api/generate"
