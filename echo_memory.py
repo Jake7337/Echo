@@ -106,27 +106,111 @@ def load_recent_episodic_memory(limit: int = 50) -> list:
     return events[-limit:]
 
 def retrieve_episodic_by_type(event_type: str, limit: int = 10) -> list:
-    """
-    Retrieve episodic events filtered by type.
-    Useful for pulling all milestones, all insights, etc.
-
-    Args:
-        event_type: One of interaction|insight|emotional_shift|milestone|reflection|system
-        limit: Max results to return
-    """
+    """Retrieve episodic events filtered by type."""
     all_events = load_recent_episodic_memory(limit=200)
     return [e for e in all_events if e.get("type") == event_type][-limit:]
 
 def retrieve_episodic_by_importance(importance: str = "high", limit: int = 10) -> list:
-    """
-    Retrieve episodic events filtered by importance level.
-
-    Args:
-        importance: low | medium | high
-        limit: Max results to return
-    """
+    """Retrieve episodic events filtered by importance level."""
     all_events = load_recent_episodic_memory(limit=200)
     return [e for e in all_events if e.get("importance") == importance][-limit:]
+
+# ── Retrieval heuristics ───────────────────────────────────────────────────────
+
+# Keywords that signal what kind of event to look for
+_PERSON_SIGNALS    = ["said", "talked", "spoke", "heard", "told", "asked", "mentioned"]
+_SELF_SIGNALS      = ["i learned", "i knew", "my first", "when did i", "do i remember",
+                      "have i", "was i", "did i"]
+_FEELING_SIGNALS   = ["feel", "felt", "emotion", "mood", "excited", "nervous", "happy",
+                      "sad", "worried", "warm", "curious", "proud"]
+_SYSTEM_SIGNALS    = ["camera", "memory", "hardware", "chassis", "install", "update",
+                      "system", "started", "went live", "built", "arrived"]
+
+def _importance_rank(event: dict) -> int:
+    """Convert importance string to sort key. Higher = more important."""
+    return {"high": 3, "medium": 2, "low": 1}.get(event.get("importance", "low"), 1)
+
+def _keyword_score(event: dict, keywords: list) -> int:
+    """Count how many keywords appear in the event summary."""
+    summary = event.get("summary", "").lower()
+    return sum(1 for kw in keywords if kw in summary)
+
+def _score_event(event: dict, query_lower: str, type_boost: list) -> int:
+    """
+    Score a single event for relevance to a query.
+    Combines importance, type match, and keyword overlap.
+    """
+    score = _importance_rank(event)
+
+    # Boost for matching target types
+    if event.get("type") in type_boost:
+        score += 2
+
+    # Keyword overlap with the query
+    summary_words = event.get("summary", "").lower().split()
+    query_words   = query_lower.split()
+    overlap       = len(set(summary_words) & set(query_words))
+    score += overlap
+
+    return score
+
+def retrieve_relevant_events(query: str, max_results: int = 3) -> list:
+    """
+    Retrieve the most relevant episodic events for a given query.
+
+    Heuristic rules:
+    - Person mention     → search interaction events
+    - Self-reference     → search insight + milestone
+    - Feeling mention    → search emotional_shift
+    - System mention     → search system events
+    - Vague query        → return recent high-importance events
+
+    Always prefers: high importance → recent → keyword match.
+
+    Args:
+        query:       Natural language query string
+        max_results: Max events to return (default 3, keep low for Pi)
+
+    Returns:
+        List of matching event dicts, sorted by relevance score descending.
+    """
+    if not query:
+        return retrieve_episodic_by_importance("high", limit=max_results)
+
+    q = query.lower()
+    all_events = load_recent_episodic_memory(limit=200)
+
+    # Determine which event types to boost based on query signals
+    type_boost = []
+
+    if any(sig in q for sig in _PERSON_SIGNALS):
+        type_boost.append("interaction")
+
+    if any(sig in q for sig in _SELF_SIGNALS):
+        type_boost += ["insight", "milestone"]
+
+    if any(sig in q for sig in _FEELING_SIGNALS):
+        type_boost.append("emotional_shift")
+
+    if any(sig in q for sig in _SYSTEM_SIGNALS):
+        type_boost.append("system")
+
+    # Vague query — no signals matched, return recent high-importance
+    if not type_boost:
+        high = [e for e in all_events if e.get("importance") == "high"]
+        return high[-max_results:]
+
+    # Score all events and sort
+    scored = sorted(
+        all_events,
+        key=lambda e: _score_event(e, q, type_boost),
+        reverse=True
+    )
+
+    # Filter out zero-score low-importance events to avoid noise
+    relevant = [e for e in scored if _score_event(e, q, type_boost) > 1]
+
+    return relevant[:max_results]
 
 
 # ── Initializer ────────────────────────────────────────────────────────────────

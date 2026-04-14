@@ -20,6 +20,7 @@ from echo_memory import (
     update_emotional_state,
     refresh_echo_state_after_update,
     load_recent_episodic_memory,
+    retrieve_relevant_events,
 )
 
 # ── Config ─────────────────────────────────────────────────────────────────────
@@ -161,6 +162,13 @@ def build_state_context(state: dict) -> str:
         lines.append(episodic_summary)
 
     return "\n".join(lines)
+
+# ── Memory retrieval ───────────────────────────────────────────────────────
+
+def retrieve_memory(query: str) -> list:
+    """Retrieve relevant episodic events for a natural language query."""
+    return retrieve_relevant_events(query)
+
 
 # ── LLM ────────────────────────────────────────────────────────────────────────
 
