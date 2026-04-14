@@ -72,7 +72,20 @@
 
   #jobs     { grid-column: 1; grid-row: 1; }
   #face     { grid-column: 3; grid-row: 1; }
-  #orb-cell { grid-column: 2; grid-row: 2; display: flex; align-items: center; justify-content: center; }
+  #orb-cell { grid-column: 2; grid-row: 2; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 10px; }
+
+  #btn-fullscreen {
+    background: transparent;
+    border: 1px solid var(--dim);
+    color: var(--dim);
+    font-size: 0.9rem;
+    padding: 4px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    line-height: 1;
+  }
+  #btn-fullscreen:hover { border-color: var(--cyan); color: var(--cyan); }
   #chat     { grid-column: 1; grid-row: 3; }
   #molt     { grid-column: 3; grid-row: 3; }
 
@@ -417,6 +430,7 @@
     <div id="orb" class="idle"></div>
     <div id="orb-label">idle</div>
   </div>
+  <button id="btn-fullscreen" onclick="toggleFullscreen()" title="Toggle fullscreen">⛶</button>
 </div>
 
 <!-- BOTTOM LEFT: Chat -->
@@ -849,6 +863,22 @@ async function pollState() {
     setOrb(map[em] || "idle");
   } catch(e) {}
 }
+
+// ── Fullscreen ─────────────────────────────────────────────────────────────
+function toggleFullscreen() {
+  const btn = document.getElementById("btn-fullscreen");
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen();
+    btn.textContent = "✕";
+  } else {
+    document.exitFullscreen();
+    btn.textContent = "⛶";
+  }
+}
+document.addEventListener("fullscreenchange", () => {
+  const btn = document.getElementById("btn-fullscreen");
+  if (btn) btn.textContent = document.fullscreenElement ? "✕" : "⛶";
+});
 
 // ── Init ───────────────────────────────────────────────────────────────────
 initJobs();
