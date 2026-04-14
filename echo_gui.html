@@ -528,7 +528,7 @@ async function initJobs() {
   } catch(e) {}
 
   // Pi jobs
-  addSectionHeader(rowsEl, "PI — " + '<span id="pi-conn-status" style="color:#ff4466">offline</span>');
+  addSectionHeader(rowsEl, "PI —", "pi-conn-status");
   const piJobs = {
     "pi_speak":   "Pi Speak",
     "echo_voice": "Echo Voice",
@@ -538,10 +538,17 @@ async function initJobs() {
   }
 }
 
-function addSectionHeader(parent, label) {
+function addSectionHeader(parent, text, statusId) {
   const div = document.createElement("div");
   div.style.cssText = "font-size:0.5rem;letter-spacing:3px;text-transform:uppercase;color:var(--dim);margin:6px 0 4px;border-bottom:1px solid rgba(255,255,255,0.05);padding-bottom:3px;";
-  div.innerHTML = label;
+  div.textContent = text;
+  if (statusId) {
+    const span = document.createElement("span");
+    span.id = statusId;
+    span.style.color = "#ff4466";
+    span.textContent = " offline";
+    div.appendChild(span);
+  }
   parent.appendChild(div);
 }
 
