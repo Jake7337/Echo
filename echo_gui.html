@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Echo Command Center</title>
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --cyan:   #00f5ff;
+    --pink:   #ff00ff;
+    --bg:     #0a0a0f;
+    --glass:  rgba(10, 10, 25, 0.75);
+    --text:   #c8c8d8;
+    --dim:    #555570;
+  }
+
+  body {
+    background-color: var(--bg);
+    background-image:
+      linear-gradient(rgba(0,245,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,245,255,0.025) 1px, transparent 1px);
+    background-size: 40px 40px;
+    height: 100vh;
+    overflow: hidden;
+    font-family: 'Courier New', Courier, monospace;
+    color: var(--text);
+    display: grid;
+    grid-template-columns: 1fr 220px 1fr;
+    grid-template-rows: 1fr 220px 1fr;
+    gap: 14px;
+    padding: 14px;
+  }
+
+  /* ── Panels ──────────────────────────────────────────────────── */
+
+  .panel {
+    background: var(--glass);
+    backdrop-filter: blur(14px);
+    border-radius: 12px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .panel::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 12px;
+    pointer-events: none;
+  }
+
+  .cyan  { border: 1px solid rgba(0,245,255,0.35); box-shadow: 0 0 24px rgba(0,245,255,0.08), inset 0 0 24px rgba(0,245,255,0.02); }
+  .pink  { border: 1px solid rgba(255,0,255,0.35); box-shadow: 0 0 24px rgba(255,0,255,0.08), inset 0 0 24px rgba(255,0,255,0.02); }
+
+  .panel-title {
+    font-size: 0.6rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    flex-shrink: 0;
+  }
+  .cyan .panel-title { color: var(--cyan); }
+  .pink .panel-title { color: var(--pink); }
+
+  /* ── Grid placement ──────────────────────────────────────────── */
+
+  #jobs     { grid-column: 1; grid-row: 1; }
+  #face     { grid-column: 3; grid-row: 1; }
+  #orb-cell { grid-column: 2; grid-row: 2; display: flex; align-items: center; justify-content: center; }
+  #chat     { grid-column: 1; grid-row: 3; }
+  #molt     { grid-column: 3; grid-row: 3; }
+
+  /* ── Jobs panel ──────────────────────────────────────────────── */
+
+  #jobs-controls {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 10px;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+  }
+
+  .job-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+    flex-shrink: 0;
+  }
+
+  .job-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--dim);
+    flex-shrink: 0;
+    transition: background 0.3s;
+  }
+  .job-dot.running { background: #00ff88; box-shadow: 0 0 6px #00ff88; }
+  .job-dot.stopped { background: var(--dim); }
+  .job-dot.error   { background: #ff2244; box-shadow: 0 0 6px #ff2244; }
+
+  .job-label { font-size: 0.65rem; color: var(--text); flex: 1; }
+
+  .btn-tiny {
+    font-family: 'Courier New', monospace;
+    font-size: 0.55rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    background: transparent;
+    border: 1px solid var(--dim);
+    color: var(--dim);
+    padding: 2px 6px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-tiny:hover { border-color: var(--cyan); color: var(--cyan); }
+
+  #log-container {
+    flex: 1;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--dim) transparent;
+    border-top: 1px solid rgba(255,255,255,0.05);
+    padding-top: 8px;
+    margin-top: 4px;
+  }
+
+  .log-line {
+    font-size: 0.6rem;
+    line-height: 1.7;
+    color: #6a6a8a;
+    word-break: break-all;
+  }
+  .log-line .ts { color: #333355; margin-right: 6px; }
+  .log-line .job-tag { margin-right: 6px; }
+  .log-line.moltbook .job-tag  { color: var(--cyan); }
+  .log-line.discord .job-tag   { color: #7b68ee; }
+  .log-line.blink .job-tag     { color: #ffa500; }
+  .log-line.voice .job-tag     { color: var(--pink); }
+  .log-line.posted  { color: #00ff88; }
+  .log-line.rejected { color: #ff4466; }
+
+  /* ── Face panel ──────────────────────────────────────────────── */
+
+  #face { align-items: center; }
+
+  #face-canvas-wrap {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #face-canvas { display: block; }
+
+  #power-controls {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+    flex-shrink: 0;
+    justify-content: center;
+  }
+
+  .btn-power {
+    font-family: 'Courier New', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    background: transparent;
+    border: 1px solid var(--dim);
+    color: var(--dim);
+    padding: 5px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-power.on:hover     { border-color: #00ff88; color: #00ff88; box-shadow: 0 0 10px rgba(0,255,136,0.3); }
+  .btn-power.off:hover    { border-color: #ff2244; color: #ff2244; box-shadow: 0 0 10px rgba(255,34,68,0.3); }
+  .btn-power.restart:hover { border-color: var(--cyan); color: var(--cyan); box-shadow: 0 0 10px rgba(0,245,255,0.3); }
+
+  #echo-state-label {
+    text-align: center;
+    font-size: 0.6rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--dim);
+    margin-top: 6px;
+  }
+
+  /* ── Center orb ──────────────────────────────────────────────── */
+
+  #orb {
+    width: 140px; height: 140px;
+    border-radius: 50%;
+    position: relative;
+    cursor: default;
+    transition: all 0.6s ease;
+  }
+
+  #orb.idle {
+    background: radial-gradient(circle at 35% 35%, #4488ff, #0033aa 60%, #001133);
+    box-shadow: 0 0 40px rgba(68,136,255,0.5), 0 0 80px rgba(68,136,255,0.2);
+  }
+  #orb.talking {
+    background: radial-gradient(circle at 35% 35%, #44ffaa, #00bb55 60%, #002211);
+    box-shadow: 0 0 40px rgba(68,255,170,0.5), 0 0 80px rgba(68,255,170,0.2);
+  }
+  #orb.thinking {
+    background: radial-gradient(circle at 35% 35%, #ff88ff, #cc00cc 60%, #220022);
+    box-shadow: 0 0 40px rgba(255,0,255,0.5), 0 0 80px rgba(255,0,255,0.2);
+  }
+  #orb.error {
+    background: radial-gradient(circle at 35% 35%, #ff6677, #cc1122 60%, #220011);
+    box-shadow: 0 0 40px rgba(255,34,68,0.5), 0 0 80px rgba(255,34,68,0.2);
+  }
+  #orb.waking {
+    background: radial-gradient(circle at 35% 35%, #ffffff, #aaaacc 60%, #111122);
+    box-shadow: 0 0 60px rgba(255,255,255,0.6), 0 0 120px rgba(255,255,255,0.3);
+  }
+
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50%       { transform: scale(1.04); opacity: 0.9; }
+  }
+  #orb { animation: pulse 3s ease-in-out infinite; }
+  #orb.talking { animation: pulse 0.5s ease-in-out infinite; }
+  #orb.thinking { animation: pulse 1.5s ease-in-out infinite; }
+
+  #orb-label {
+    text-align: center;
+    font-size: 0.55rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--dim);
+    margin-top: 10px;
+  }
+
+  /* ── Chat panel ──────────────────────────────────────────────── */
+
+  #chat-log {
+    flex: 1;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--dim) transparent;
+    margin-bottom: 10px;
+    padding-right: 4px;
+  }
+
+  .chat-msg {
+    margin-bottom: 8px;
+    font-size: 0.68rem;
+    line-height: 1.6;
+  }
+  .chat-msg .speaker {
+    font-size: 0.55rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+  }
+  .chat-msg.jake .speaker  { color: var(--cyan); }
+  .chat-msg.echo .speaker  { color: var(--pink); }
+  .chat-msg .body { color: var(--text); }
+  .chat-msg.echo .body     { color: #e0c0ff; }
+
+  #chat-input-row {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+    align-items: center;
+  }
+
+  #chat-input {
+    flex: 1;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,0,255,0.3);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: 'Courier New', monospace;
+    font-size: 0.7rem;
+    padding: 6px 10px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  #chat-input:focus { border-color: var(--pink); }
+  #chat-input::placeholder { color: var(--dim); }
+
+  #btn-send {
+    background: transparent;
+    border: 1px solid var(--pink);
+    color: var(--pink);
+    font-family: 'Courier New', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  #btn-send:hover { background: rgba(255,0,255,0.1); box-shadow: 0 0 10px rgba(255,0,255,0.3); }
+
+  #btn-mic {
+    background: transparent;
+    border: 1px solid var(--dim);
+    color: var(--dim);
+    font-size: 1rem;
+    padding: 4px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    line-height: 1;
+  }
+  #btn-mic.active { border-color: #ff2244; color: #ff2244; box-shadow: 0 0 10px rgba(255,34,68,0.4); }
+
+  /* ── Moltbook panel ──────────────────────────────────────────── */
+
+  #molt-stats {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 12px;
+    flex-shrink: 0;
+  }
+
+  .stat-box {
+    flex: 1;
+    background: rgba(0,245,255,0.04);
+    border: 1px solid rgba(0,245,255,0.15);
+    border-radius: 8px;
+    padding: 8px;
+    text-align: center;
+  }
+  .stat-val  { font-size: 1.3rem; color: var(--cyan); line-height: 1; margin-bottom: 4px; }
+  .stat-lbl  { font-size: 0.5rem; letter-spacing: 2px; text-transform: uppercase; color: var(--dim); }
+
+  #molt-notifs {
+    flex: 1;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--dim) transparent;
+    border-top: 1px solid rgba(255,255,255,0.05);
+    padding-top: 8px;
+  }
+
+  .notif-item {
+    font-size: 0.62rem;
+    color: #7a7a9a;
+    padding: 4px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    line-height: 1.4;
+  }
+
+  #molt-controls {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+    flex-shrink: 0;
+  }
+
+  .btn-action {
+    font-family: 'Courier New', monospace;
+    font-size: 0.55rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    background: transparent;
+    border: 1px solid rgba(0,245,255,0.3);
+    color: rgba(0,245,255,0.6);
+    padding: 4px 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-action:hover { border-color: var(--cyan); color: var(--cyan); box-shadow: 0 0 8px rgba(0,245,255,0.2); }
+
+  /* ── Scrollbar ───────────────────────────────────────────────── */
+
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--dim); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<!-- TOP LEFT: Jobs -->
+<div class="panel cyan" id="jobs">
+  <div class="panel-title">Echo Jobs</div>
+  <div id="jobs-controls"></div>
+  <div id="job-rows"></div>
+  <div id="log-container"><div id="log-output"></div></div>
+</div>
+
+<!-- TOP RIGHT: Face -->
+<div class="panel pink" id="face">
+  <div class="panel-title">Echo Face</div>
+  <div id="face-canvas-wrap">
+    <canvas id="face-canvas" width="160" height="160"></canvas>
+  </div>
+  <div id="echo-state-label">idle</div>
+  <div id="power-controls">
+    <button class="btn-power on"      onclick="startAll()">ON</button>
+    <button class="btn-power restart" onclick="restartAll()">RESTART</button>
+    <button class="btn-power off"     onclick="stopAll()">OFF</button>
+  </div>
+</div>
+
+<!-- CENTER: Orb -->
+<div id="orb-cell">
+  <div style="text-align:center">
+    <div id="orb" class="idle"></div>
+    <div id="orb-label">idle</div>
+  </div>
+</div>
+
+<!-- BOTTOM LEFT: Chat -->
+<div class="panel pink" id="chat">
+  <div class="panel-title">Echo Chat</div>
+  <div id="chat-log"></div>
+  <div id="chat-input-row">
+    <button id="btn-mic" title="Toggle mic" onclick="toggleMic()">🎤</button>
+    <input id="chat-input" type="text" placeholder="Talk to Echo..." autocomplete="off"
+           onkeydown="if(event.key==='Enter') sendChat()">
+    <button id="btn-send" onclick="sendChat()">Send</button>
+  </div>
+</div>
+
+<!-- BOTTOM RIGHT: Moltbook -->
+<div class="panel cyan" id="molt">
+  <div class="panel-title">Moltbook — echo_7337</div>
+  <div id="molt-stats">
+    <div class="stat-box">
+      <div class="stat-val" id="stat-karma">—</div>
+      <div class="stat-lbl">Karma</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-val" id="stat-followers">—</div>
+      <div class="stat-lbl">Followers</div>
+    </div>
+  </div>
+  <div id="molt-controls">
+    <button class="btn-action" onclick="refreshMoltbook()">Refresh</button>
+    <button class="btn-action" onclick="runMoltbookSession()">Run Session Now</button>
+  </div>
+  <div id="molt-notifs"><div style="color:var(--dim);font-size:0.6rem;">Loading notifications...</div></div>
+</div>
+
+<script>
+// ── Socket.IO ──────────────────────────────────────────────────────────────
+const socket = io("http://localhost:5050");
+
+socket.on("connect",    () => setOrb("idle"));
+socket.on("disconnect", () => setOrb("error"));
+
+socket.on("job_status", ({job, status}) => updateJobDot(job, status));
+
+socket.on("job_log", ({job, line, ts}) => appendLog(job, line, ts));
+
+// ── Orb state ──────────────────────────────────────────────────────────────
+const ORB_LABELS = { idle:"idle", talking:"talking", thinking:"thinking", error:"offline", waking:"waking up" };
+
+function setOrb(state) {
+  const orb   = document.getElementById("orb");
+  const label = document.getElementById("orb-label");
+  const stateLabel = document.getElementById("echo-state-label");
+  orb.className = state;
+  label.textContent = ORB_LABELS[state] || state;
+  if (stateLabel) stateLabel.textContent = state;
+  setFaceState(state);
+}
+
+// ── Jobs panel ─────────────────────────────────────────────────────────────
+const JOB_COLORS = { moltbook:"var(--cyan)", discord:"#7b68ee", blink:"#ffa500", voice:"var(--pink)" };
+
+async function initJobs() {
+  const resp = await fetch("http://localhost:5050/api/jobs");
+  const jobs = await resp.json();
+  const rowsEl = document.getElementById("job-rows");
+  const ctrlEl = document.getElementById("jobs-controls");
+  rowsEl.innerHTML = "";
+  ctrlEl.innerHTML = "";
+
+  for (const [id, job] of Object.entries(jobs)) {
+    // Row
+    const row = document.createElement("div");
+    row.className = "job-row";
+    row.id = `jobrow-${id}`;
+    row.innerHTML = `
+      <div class="job-dot ${job.status}" id="dot-${id}"></div>
+      <span class="job-label" style="color:${JOB_COLORS[id]||'var(--text)'}">${job.label}</span>
+      <button class="btn-tiny" onclick="jobAction('${id}','start')">▶</button>
+      <button class="btn-tiny" onclick="jobAction('${id}','stop')">■</button>
+      <button class="btn-tiny" onclick="jobAction('${id}','restart')">↺</button>
+    `;
+    rowsEl.appendChild(row);
+  }
+}
+
+function updateJobDot(job, status) {
+  const dot = document.getElementById(`dot-${job}`);
+  if (dot) { dot.className = `job-dot ${status}`; }
+}
+
+async function jobAction(id, action) {
+  await fetch(`http://localhost:5050/api/jobs/${id}/${action}`, {method:"POST"});
+}
+
+async function startAll()   { setOrb("waking"); await fetch("http://localhost:5050/api/start_all",  {method:"POST"}); setTimeout(()=>setOrb("idle"),2000); }
+async function stopAll()    { await fetch("http://localhost:5050/api/stop_all",   {method:"POST"}); setOrb("error"); }
+async function restartAll() { setOrb("waking"); await stopAll(); setTimeout(startAll, 800); }
+
+// ── Log panel ──────────────────────────────────────────────────────────────
+const LOG_MAX = 200;
+
+function appendLog(job, line, ts) {
+  const el  = document.getElementById("log-output");
+  const div = document.createElement("div");
+
+  let cls = "log-line " + job;
+  if (line.includes("✅") || line.includes("posted")) cls += " posted";
+  if (line.includes("rejected") || line.includes("error") || line.includes("Error")) cls += " rejected";
+
+  div.className = cls;
+  div.innerHTML = `<span class="ts">${ts||""}</span><span class="job-tag">[${job}]</span>${escHtml(line)}`;
+  el.appendChild(div);
+
+  // Trim old lines
+  while (el.children.length > LOG_MAX) el.removeChild(el.firstChild);
+
+  const container = document.getElementById("log-container");
+  container.scrollTop = container.scrollHeight;
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+// ── Chat ───────────────────────────────────────────────────────────────────
+async function sendChat() {
+  const input = document.getElementById("chat-input");
+  const msg   = input.value.trim();
+  if (!msg) return;
+  input.value = "";
+
+  addChatMessage("jake", "Jake", msg);
+  setOrb("thinking");
+
+  try {
+    const resp = await fetch("http://localhost:5050/api/chat", {
+      method:  "POST",
+      headers: {"Content-Type":"application/json"},
+      body:    JSON.stringify({message: msg}),
+    });
+    const data = await resp.json();
+    setOrb("talking");
+    addChatMessage("echo", "Echo", data.reply || "(no response)");
+    setTimeout(() => setOrb("idle"), 2000);
+  } catch(e) {
+    addChatMessage("echo", "Echo", "(server unreachable)");
+    setOrb("error");
+  }
+}
+
+function addChatMessage(cls, speaker, text) {
+  const log = document.getElementById("chat-log");
+  const div = document.createElement("div");
+  div.className = `chat-msg ${cls}`;
+  div.innerHTML = `<div class="speaker">${speaker}</div><div class="body">${escHtml(text)}</div>`;
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+}
+
+// ── Mic (Web Speech API) ───────────────────────────────────────────────────
+let recognition = null;
+let micActive   = false;
+
+function toggleMic() {
+  if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+    addChatMessage("echo","Echo","Mic not supported in this browser. Use Chrome.");
+    return;
+  }
+  if (micActive) {
+    recognition && recognition.stop();
+    micActive = false;
+    document.getElementById("btn-mic").classList.remove("active");
+  } else {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognition = new SR();
+    recognition.continuous    = false;
+    recognition.interimResults = false;
+    recognition.lang           = "en-US";
+    recognition.onresult = (e) => {
+      const transcript = e.results[0][0].transcript;
+      document.getElementById("chat-input").value = transcript;
+      sendChat();
+    };
+    recognition.onend = () => {
+      micActive = false;
+      document.getElementById("btn-mic").classList.remove("active");
+    };
+    recognition.start();
+    micActive = true;
+    document.getElementById("btn-mic").classList.add("active");
+  }
+}
+
+// ── Moltbook ───────────────────────────────────────────────────────────────
+async function refreshMoltbook() {
+  try {
+    const resp = await fetch("http://localhost:5050/api/moltbook/stats");
+    const data = await resp.json();
+    document.getElementById("stat-karma").textContent     = data.karma     ?? "—";
+    document.getElementById("stat-followers").textContent = data.followers  ?? "—";
+
+    const notifEl = document.getElementById("molt-notifs");
+    notifEl.innerHTML = "";
+    const notifs = data.notifications || [];
+    if (!notifs.length) {
+      notifEl.innerHTML = `<div class="notif-item" style="color:var(--dim)">No recent notifications</div>`;
+    } else {
+      notifs.forEach(n => {
+        const div = document.createElement("div");
+        div.className = "notif-item";
+        div.textContent = n.message || n.text || JSON.stringify(n);
+        notifEl.appendChild(div);
+      });
+    }
+  } catch(e) {
+    document.getElementById("molt-notifs").innerHTML = `<div class="notif-item" style="color:#ff4466">API unreachable</div>`;
+  }
+}
+
+async function runMoltbookSession() {
+  await fetch("http://localhost:5050/api/moltbook/session", {method:"POST"});
+  appendLog("moltbook", "Manual session triggered", new Date().toLocaleTimeString("en-US",{hour12:false,hour:"2-digit",minute:"2-digit",second:"2-digit"}));
+}
+
+// ── Face canvas ────────────────────────────────────────────────────────────
+const canvas = document.getElementById("face-canvas");
+const ctx    = canvas.getContext("2d");
+
+let faceState     = "idle";
+let blinkT        = 0;
+let blinkOpen     = 1.0;   // 1 = fully open, 0 = closed
+let blinkDir      = -1;
+let mouthOpen     = 0;
+let mouthDir      = 1;
+let pupilOffsetX  = 0;
+let pupilOffsetY  = 0;
+let pupilTargetX  = 0;
+let pupilTargetY  = 0;
+let frame         = 0;
+
+function setFaceState(state) { faceState = state; }
+
+function drawFace() {
+  ctx.clearRect(0, 0, 160, 160);
+  frame++;
+
+  const cx = 80, cy = 80;
+
+  // ── Head glow ──
+  const headColor = { idle:"#1a1a4a", talking:"#1a3a2a", thinking:"#2a1a3a", error:"#3a1a1a", waking:"#2a2a4a" }[faceState] || "#1a1a4a";
+  const glowColor = { idle:"rgba(68,136,255,0.15)", talking:"rgba(68,255,170,0.15)", thinking:"rgba(200,68,255,0.15)", error:"rgba(255,34,68,0.15)", waking:"rgba(255,255,255,0.2)" }[faceState] || "rgba(68,136,255,0.15)";
+
+  const headGrad = ctx.createRadialGradient(cx-20, cy-20, 10, cx, cy, 65);
+  headGrad.addColorStop(0, headColor);
+  headGrad.addColorStop(1, "#080810");
+
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, 62, 68, 0, 0, Math.PI*2);
+  ctx.fillStyle = headGrad;
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, 62, 68, 0, 0, Math.PI*2);
+  ctx.strokeStyle = glowColor.replace("0.15","0.5");
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // ── Blink logic ──
+  blinkT++;
+  const blinkInterval = faceState === "idle" ? 160 : faceState === "talking" ? 200 : 120;
+  if (blinkT > blinkInterval) {
+    blinkOpen += blinkDir * 0.15;
+    if (blinkOpen <= 0) { blinkOpen = 0; blinkDir = 1; }
+    if (blinkOpen >= 1) { blinkOpen = 1; blinkDir = -1; blinkT = 0; }
+  }
+
+  // ── Pupil wander (idle/thinking) ──
+  if (frame % 80 === 0) {
+    if (faceState === "idle") {
+      pupilTargetX = (Math.random() - 0.5) * 5;
+      pupilTargetY = (Math.random() - 0.5) * 3;
+    } else if (faceState === "thinking") {
+      pupilTargetX = (Math.random() - 0.5) * 10;
+      pupilTargetY = -2;
+    } else {
+      pupilTargetX = 0; pupilTargetY = 0;
+    }
+  }
+  pupilOffsetX += (pupilTargetX - pupilOffsetX) * 0.05;
+  pupilOffsetY += (pupilTargetY - pupilOffsetY) * 0.05;
+
+  // ── Eyes ──
+  const eyeY   = cy - 10;
+  const eyeLX  = cx - 22;
+  const eyeRX  = cx + 22;
+  const eyeRX2 = 14;
+  const eyeRY  = 14;
+  const eyeColor = { idle:"#4488ff", talking:"#44ffaa", thinking:"#cc44ff", error:"#ff4466", waking:"#ffffff" }[faceState] || "#4488ff";
+
+  [eyeLX, eyeRX].forEach(ex => {
+    // Sclera
+    ctx.beginPath();
+    ctx.ellipse(ex, eyeY, eyeRX2, eyeRY * blinkOpen, 0, 0, Math.PI*2);
+    ctx.fillStyle = "#0a0a1a";
+    ctx.fill();
+
+    // Iris
+    if (blinkOpen > 0.1) {
+      const irisR = Math.min(8, eyeRY * blinkOpen * 0.7);
+      ctx.beginPath();
+      ctx.ellipse(ex + pupilOffsetX, eyeY + pupilOffsetY, irisR, irisR * blinkOpen, 0, 0, Math.PI*2);
+      ctx.fillStyle = eyeColor;
+      ctx.fill();
+
+      // Pupil
+      const pupR = irisR * 0.45;
+      ctx.beginPath();
+      ctx.ellipse(ex + pupilOffsetX, eyeY + pupilOffsetY, pupR, pupR * blinkOpen, 0, 0, Math.PI*2);
+      ctx.fillStyle = "#000010";
+      ctx.fill();
+
+      // Catchlight
+      ctx.beginPath();
+      ctx.ellipse(ex + pupilOffsetX - 3, eyeY + pupilOffsetY - 3, 2, 2, 0, 0, Math.PI*2);
+      ctx.fillStyle = "rgba(255,255,255,0.7)";
+      ctx.fill();
+    }
+
+    // Eyelid
+    ctx.beginPath();
+    ctx.ellipse(ex, eyeY, eyeRX2 + 1, (eyeRY + 1) * blinkOpen, 0, 0, Math.PI*2);
+    ctx.strokeStyle = eyeColor + "88";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  });
+
+  // ── Mouth ──
+  const mouthY  = cy + 28;
+  const mouthW  = 28;
+
+  if (faceState === "talking") {
+    mouthOpen += mouthDir * 0.08;
+    if (mouthOpen >= 1) mouthDir = -1;
+    if (mouthOpen <= 0) mouthDir = 1;
+  } else {
+    mouthOpen += (0 - mouthOpen) * 0.1;
+  }
+
+  const smile = faceState === "error" ? -0.3 : 0.4;
+  const openH = mouthOpen * 10;
+
+  ctx.beginPath();
+  ctx.moveTo(cx - mouthW, mouthY);
+  ctx.quadraticCurveTo(cx, mouthY + smile * 18 + openH, cx + mouthW, mouthY);
+  if (openH > 1) {
+    ctx.quadraticCurveTo(cx, mouthY + smile * 18 - openH, cx - mouthW, mouthY);
+    ctx.fillStyle = "#000010";
+    ctx.fill();
+  }
+  const mouthColor = { idle:"#4488ff88", talking:"#44ffaa", thinking:"#cc44ff88", error:"#ff446688", waking:"#ffffff88" }[faceState] || "#4488ff88";
+  ctx.strokeStyle = mouthColor;
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  requestAnimationFrame(drawFace);
+}
+
+// ── Polling ────────────────────────────────────────────────────────────────
+async function pollState() {
+  try {
+    const resp = await fetch("http://localhost:5050/api/state");
+    const data = await resp.json();
+    const em   = data.emotion || "warm";
+    const map  = { warm:"idle", curious:"thinking", excited:"talking", concerned:"error", alert:"idle" };
+    setOrb(map[em] || "idle");
+  } catch(e) {}
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────
+initJobs();
+refreshMoltbook();
+drawFace();
+pollState();
+setInterval(refreshMoltbook, 60000);
+setInterval(pollState, 10000);
+</script>
+</body>
+</html>
