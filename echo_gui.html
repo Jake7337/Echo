@@ -140,10 +140,12 @@
   }
   .log-line .ts { color: #333355; margin-right: 6px; }
   .log-line .job-tag { margin-right: 6px; }
-  .log-line.moltbook .job-tag  { color: var(--cyan); }
-  .log-line.discord .job-tag   { color: #7b68ee; }
-  .log-line.blink .job-tag     { color: #ffa500; }
-  .log-line.voice .job-tag     { color: var(--pink); }
+  .log-line.moltbook .job-tag       { color: var(--cyan); }
+  .log-line.discord .job-tag        { color: #7b68ee; }
+  .log-line.blink .job-tag          { color: #ffa500; }
+  .log-line.voice .job-tag          { color: var(--pink); }
+  .log-line.pi_pi_speak .job-tag    { color: #00ff88; }
+  .log-line.pi_echo_voice .job-tag  { color: var(--pink); }
   .log-line.posted  { color: #00ff88; }
   .log-line.rejected { color: #ff4466; }
 
@@ -450,15 +452,23 @@
 </div>
 
 <script>
-// ── Socket.IO ──────────────────────────────────────────────────────────────
+// ── Socket.IO — PC ────────────────────────────────────────────────────────
 const socket = io("http://localhost:5050");
 
 socket.on("connect",    () => setOrb("idle"));
 socket.on("disconnect", () => setOrb("error"));
 
 socket.on("job_status", ({job, status}) => updateJobDot(job, status));
+socket.on("job_log",    ({job, line, ts}) => appendLog(job, line, ts));
 
-socket.on("job_log", ({job, line, ts}) => appendLog(job, line, ts));
+// ── Socket.IO — Pi ────────────────────────────────────────────────────────
+const PI_URL   = "http://192.168.68.84:5101";
+const piSocket = io(PI_URL, {reconnectionDelay: 3000, reconnectionAttempts: 20});
+
+piSocket.on("connect",    () => updatePiStatus("online"));
+piSocket.on("disconnect", () => updatePiStatus("offline"));
+piSocket.on("pi_status",  ({job, status}) => updateJobDot("pi_" + job, status));
+piSocket.on("pi_log",     ({job, line, ts}) => appendLog("pi_" + job, line, ts));
 
 // ── Orb state ──────────────────────────────────────────────────────────────
 const ORB_LABELS = { idle:"idle", talking:"talking", thinking:"thinking", error:"offline", waking:"waking up" };
@@ -474,43 +484,90 @@ function setOrb(state) {
 }
 
 // ── Jobs panel ─────────────────────────────────────────────────────────────
-const JOB_COLORS = { moltbook:"var(--cyan)", discord:"#7b68ee", blink:"#ffa500", voice:"var(--pink)" };
+const JOB_COLORS = {
+  moltbook:"var(--cyan)", discord:"#7b68ee", blink:"#ffa500",
+  pi_pi_speak:"#00ff88", pi_echo_voice:"var(--pink)"
+};
 
 async function initJobs() {
-  const resp = await fetch("http://localhost:5050/api/jobs");
-  const jobs = await resp.json();
   const rowsEl = document.getElementById("job-rows");
-  const ctrlEl = document.getElementById("jobs-controls");
   rowsEl.innerHTML = "";
-  ctrlEl.innerHTML = "";
 
-  for (const [id, job] of Object.entries(jobs)) {
-    // Row
-    const row = document.createElement("div");
-    row.className = "job-row";
-    row.id = `jobrow-${id}`;
-    row.innerHTML = `
-      <div class="job-dot ${job.status}" id="dot-${id}"></div>
-      <span class="job-label" style="color:${JOB_COLORS[id]||'var(--text)'}">${job.label}</span>
-      <button class="btn-tiny" onclick="jobAction('${id}','start')">▶</button>
-      <button class="btn-tiny" onclick="jobAction('${id}','stop')">■</button>
-      <button class="btn-tiny" onclick="jobAction('${id}','restart')">↺</button>
-    `;
-    rowsEl.appendChild(row);
+  // PC jobs
+  try {
+    const resp = await fetch("http://localhost:5050/api/jobs");
+    const jobs = await resp.json();
+    addSectionHeader(rowsEl, "PC");
+    for (const [id, job] of Object.entries(jobs)) {
+      addJobRow(rowsEl, id, job.label, job.status, "pc");
+    }
+  } catch(e) {}
+
+  // Pi jobs
+  addSectionHeader(rowsEl, "PI — " + '<span id="pi-conn-status" style="color:#ff4466">offline</span>');
+  const piJobs = {
+    "pi_speak":   "Pi Speak",
+    "echo_voice": "Echo Voice",
+  };
+  for (const [id, label] of Object.entries(piJobs)) {
+    addJobRow(rowsEl, "pi_" + id, label, "stopped", "pi", id);
   }
+}
+
+function addSectionHeader(parent, label) {
+  const div = document.createElement("div");
+  div.style.cssText = "font-size:0.5rem;letter-spacing:3px;text-transform:uppercase;color:var(--dim);margin:6px 0 4px;border-bottom:1px solid rgba(255,255,255,0.05);padding-bottom:3px;";
+  div.innerHTML = label;
+  parent.appendChild(div);
+}
+
+function addJobRow(parent, dotId, label, status, target, piJobId) {
+  const row = document.createElement("div");
+  row.className = "job-row";
+  row.id = `jobrow-${dotId}`;
+  const color = JOB_COLORS[dotId] || "var(--text)";
+  const startFn  = target === "pi" ? `piJobAction('${piJobId}','start')`   : `jobAction('${dotId}','start')`;
+  const stopFn   = target === "pi" ? `piJobAction('${piJobId}','stop')`    : `jobAction('${dotId}','stop')`;
+  const restartFn= target === "pi" ? `piJobAction('${piJobId}','restart')` : `jobAction('${dotId}','restart')`;
+  row.innerHTML = `
+    <div class="job-dot ${status}" id="dot-${dotId}"></div>
+    <span class="job-label" style="color:${color}">${label}</span>
+    <button class="btn-tiny" onclick="${startFn}">▶</button>
+    <button class="btn-tiny" onclick="${stopFn}">■</button>
+    <button class="btn-tiny" onclick="${restartFn}">↺</button>
+  `;
+  parent.appendChild(row);
 }
 
 function updateJobDot(job, status) {
   const dot = document.getElementById(`dot-${job}`);
-  if (dot) { dot.className = `job-dot ${status}`; }
+  if (dot) dot.className = `job-dot ${status}`;
+}
+
+function updatePiStatus(state) {
+  const el = document.getElementById("pi-conn-status");
+  if (el) { el.textContent = state; el.style.color = state === "online" ? "#00ff88" : "#ff4466"; }
 }
 
 async function jobAction(id, action) {
   await fetch(`http://localhost:5050/api/jobs/${id}/${action}`, {method:"POST"});
 }
 
-async function startAll()   { setOrb("waking"); await fetch("http://localhost:5050/api/start_all",  {method:"POST"}); setTimeout(()=>setOrb("idle"),2000); }
-async function stopAll()    { await fetch("http://localhost:5050/api/stop_all",   {method:"POST"}); setOrb("error"); }
+async function piJobAction(id, action) {
+  try { await fetch(`${PI_URL}/api/jobs/${id}/${action}`, {method:"POST"}); } catch(e) {}
+}
+
+async function startAll() {
+  setOrb("waking");
+  await fetch("http://localhost:5050/api/start_all", {method:"POST"});
+  try { await fetch(`${PI_URL}/api/start_all`, {method:"POST"}); } catch(e) {}
+  setTimeout(()=>setOrb("idle"), 2000);
+}
+async function stopAll() {
+  await fetch("http://localhost:5050/api/stop_all", {method:"POST"});
+  try { await fetch(`${PI_URL}/api/stop_all`, {method:"POST"}); } catch(e) {}
+  setOrb("error");
+}
 async function restartAll() { setOrb("waking"); await stopAll(); setTimeout(startAll, 800); }
 
 // ── Log panel ──────────────────────────────────────────────────────────────
