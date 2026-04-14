@@ -48,7 +48,7 @@ def load_identity_core() -> dict:
     """
     with open(IDENTITY_FILE, "r", encoding="utf-8") as f:
         data = json.load(f)
-    _require_keys(data, ["name", "role", "personality", "relationships"], "identity_core.json")
+    _require_keys(data, ["name", "personality", "relationships"], "identity_core.json")
     return data
 
 
@@ -59,7 +59,7 @@ def load_procedural_rules() -> dict:
     """
     with open(RULES_FILE, "r", encoding="utf-8") as f:
         data = json.load(f)
-    _require_keys(data, ["communication", "boundaries"], "procedural_rules.json")
+    _require_keys(data, ["core_rules", "prohibitions"], "procedural_rules.json")
     return data
 
 
@@ -69,7 +69,7 @@ def load_metacognition() -> dict:
     """
     with open(META_FILE, "r", encoding="utf-8") as f:
         data = json.load(f)
-    _require_keys(data, ["continuity", "self_update"], "metacognition.json")
+    _require_keys(data, ["reasoning_principles", "continuity_logic"], "metacognition.json")
     return data
 
 
