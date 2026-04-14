@@ -110,15 +110,37 @@ def condense_metacognition_for_prompt(meta: dict) -> str:
     return "\n".join(lines)
 
 
+def condense_episodic_memory_for_prompt(events: list) -> str:
+    """
+    Summarize the most important recent episodic events for prompt injection.
+    Prioritizes high-importance events, then medium. Max 5 entries, 1 line each.
+    """
+    high   = [e for e in events if e.get("importance") == "high"]
+    medium = [e for e in events if e.get("importance") == "medium"]
+    pool   = (high + medium)[-5:]
+
+    if not pool:
+        return ""
+
+    lines = ["Recent events:"]
+    for e in pool:
+        ts      = e.get("timestamp", "")[:10]
+        summary = e.get("summary", "")
+        emotion = e.get("emotion", "")
+        tag     = f" [{emotion}]" if emotion else ""
+        lines.append(f"  [{ts}] {summary}{tag}")
+
+    return "\n".join(lines)
+
+
 def build_state_context(state: dict) -> str:
     """
     Build the runtime context block injected into every LLM prompt.
-    Order: emotion → rules → metacognition → recent episodic memory.
-    This is Echo's full cognitive stack at prompt time.
+    Order: emotion → rules → metacognition → episodic continuity.
+    This is Echo's complete cognitive stack at prompt time.
     """
     emotion  = state["emotion"].get("current", "warm")
     baseline = state["emotion"].get("baseline", "warm")
-    episodes = state["episodic"][-5:]
 
     lines = [f"Current emotional state: {emotion} (baseline: {baseline})"]
 
@@ -132,14 +154,11 @@ def build_state_context(state: dict) -> str:
         lines.append("")
         lines.append(condense_metacognition_for_prompt(state["meta"]))
 
-    # Recent episodic memory
-    if episodes:
+    # Condensed episodic continuity — high/medium importance only
+    episodic_summary = condense_episodic_memory_for_prompt(state.get("episodic", []))
+    if episodic_summary:
         lines.append("")
-        lines.append("Recent memory:")
-        for e in episodes:
-            ts  = e.get("timestamp", "")[:10]
-            evt = e.get("event", "")
-            lines.append(f"  [{ts}] {evt}")
+        lines.append(episodic_summary)
 
     return "\n".join(lines)
 
@@ -239,7 +258,7 @@ def main():
         if user_input.lower() in ("quit", "exit", "bye"):
             print("Echo: Talk later.")
             speak("Talk later.", voice)
-            append_episodic_event("Session ended", context="Jake said bye")
+            append_episodic_event("Session ended — Jake said bye", event_type="system", importance="low")
             break
 
         face.thinking()
@@ -260,7 +279,8 @@ def main():
         # Update memory state
         append_episodic_event(
             f"Talked with Jake: {user_input[:80]}",
-            context=f"Echo responded: {response[:80]}"
+            event_type="interaction",
+            importance="low"
         )
 
         new_emotion = infer_emotion(user_input, response)

@@ -84,6 +84,9 @@ def load_emotional_state() -> dict:
     return data
 
 
+VALID_TYPES      = {"interaction", "insight", "emotional_shift", "milestone", "reflection", "system"}
+VALID_IMPORTANCE = {"low", "medium", "high"}
+
 def load_recent_episodic_memory(limit: int = 50) -> list:
     """
     Load the most recent episodic events from the append-only log.
@@ -101,6 +104,29 @@ def load_recent_episodic_memory(limit: int = 50) -> list:
                 except json.JSONDecodeError:
                     pass
     return events[-limit:]
+
+def retrieve_episodic_by_type(event_type: str, limit: int = 10) -> list:
+    """
+    Retrieve episodic events filtered by type.
+    Useful for pulling all milestones, all insights, etc.
+
+    Args:
+        event_type: One of interaction|insight|emotional_shift|milestone|reflection|system
+        limit: Max results to return
+    """
+    all_events = load_recent_episodic_memory(limit=200)
+    return [e for e in all_events if e.get("type") == event_type][-limit:]
+
+def retrieve_episodic_by_importance(importance: str = "high", limit: int = 10) -> list:
+    """
+    Retrieve episodic events filtered by importance level.
+
+    Args:
+        importance: low | medium | high
+        limit: Max results to return
+    """
+    all_events = load_recent_episodic_memory(limit=200)
+    return [e for e in all_events if e.get("importance") == importance][-limit:]
 
 
 # ── Initializer ────────────────────────────────────────────────────────────────
@@ -130,24 +156,35 @@ def initialize_echo_state() -> dict:
 
 # ── Updaters ───────────────────────────────────────────────────────────────────
 
-def append_episodic_event(event: str, emotion: str = "", context: str = ""):
+def append_episodic_event(
+    summary: str,
+    event_type: str = "interaction",
+    emotion: str = "",
+    importance: str = "low"
+):
     """
-    Append a single event to episodic_memory.jsonl.
+    Append a structured event to episodic_memory.jsonl.
     This file is append-only — never overwritten.
 
     Args:
-        event:   Description of what happened
-        emotion: Optional emotional tag for this event
-        context: Optional extra detail
+        summary:    Short description of what happened
+        event_type: interaction | insight | emotional_shift | milestone | reflection | system
+        emotion:    Optional emotional tag
+        importance: low | medium | high
     """
+    if event_type not in VALID_TYPES:
+        event_type = "interaction"
+    if importance not in VALID_IMPORTANCE:
+        importance = "low"
+
     entry = {
-        "timestamp": datetime.now().isoformat(),
-        "event":     event,
+        "timestamp":  datetime.now().isoformat(),
+        "type":       event_type,
+        "summary":    summary,
+        "importance": importance,
     }
     if emotion:
         entry["emotion"] = emotion
-    if context:
-        entry["context"] = context
 
     with open(EPISODIC_FILE, "a", encoding="utf-8") as f:
         f.write(json.dumps(entry) + "\n")

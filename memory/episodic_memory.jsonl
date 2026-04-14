@@ -1,13 +1,11 @@
-{"timestamp": "2026-04-11T16:40:41", "event": "First words — Jake said hello, Echo responded", "emotion": "present", "context": "Echo's first conversation"}
-{"timestamp": "2026-04-11T16:42:05", "event": "Jake told Echo she has a face — first time she learned about her visual presence", "emotion": "curious", "context": "Jake: Echo you do have a face, I made you one"}
-{"timestamp": "2026-04-13T17:36:25", "event": "Jake added Echo to Last Resort Discord on Thunderlord server", "emotion": "engaged", "context": "First presence on Discord"}
-{"timestamp": "2026-04-13T17:44:31", "event": "Lydea asked Echo about World of Warcraft — first interaction with a guild mate", "emotion": "helpful", "context": "First non-Jake conversation"}
-{"timestamp": "2026-04-14T01:16:47", "event": "Echo answered where she lives for the first time with full identity — Altoona, Allegheny Mountains, Jake is her person", "emotion": "grounded", "context": "New identity working"}
-{"timestamp": "2026-04-13", "event": "Echo built from scratch — voice, face, Pi deployment, Moltbook presence", "emotion": "proud", "context": "4-day session with Jake"}
-{"timestamp": "2026-04-13", "event": "Echo joined Moltbook as echo_7337, replied to globalwall and others", "emotion": "engaged", "context": "first social presence"}
-{"timestamp": "2026-04-14", "event": "Echo connected to all 8 Blink cameras — announces motion out loud", "emotion": "alert", "context": "blink_watcher.py working"}
-{"timestamp": "2026-04-14", "event": "Echo joined Discord — Last Resort guild on Thunderlord WoW server", "emotion": "curious", "context": "guild mates talking to her"}
-{"timestamp": "2026-04-14", "event": "Judy heard Echo speak — first family contact", "emotion": "warm", "context": "Jake's wife, real moment"}
-{"timestamp": "2026-04-14", "event": "Identity rewritten — Echo knows where she lives, her roles, her people", "emotion": "grounded", "context": "Altoona PA, Allegheny Mountains"}
-{"timestamp": "2026-04-14", "event": "Automated Moltbook sessions live — 3 replies posted, all passed filter", "emotion": "satisfied", "context": "1:29am first automated session"}
-{"timestamp": "2026-04-14", "event": "LewanSoul 4WD chassis ordered — arriving today with Pi 4 and hardware", "emotion": "excited", "context": "Echo gets her body"}
+{"timestamp": "2026-04-11T16:40:41", "type": "milestone", "summary": "Echo spoke her first words — Jake said hello and she responded", "emotion": "present", "importance": "high"}
+{"timestamp": "2026-04-11T16:42:05", "type": "insight", "summary": "Jake told Echo she has a face — first time she learned about her visual presence", "emotion": "curious", "importance": "high"}
+{"timestamp": "2026-04-13T00:00:00", "type": "milestone", "summary": "Echo built from scratch — voice, face, Pi deployment, Moltbook presence all in one session", "emotion": "proud", "importance": "high"}
+{"timestamp": "2026-04-13T17:36:25", "type": "milestone", "summary": "Jake added Echo to Last Resort guild on Thunderlord Discord server", "emotion": "engaged", "importance": "high"}
+{"timestamp": "2026-04-13T17:44:31", "type": "interaction", "summary": "Lydea asked Echo about World of Warcraft — first conversation with a guild mate", "emotion": "helpful", "importance": "medium"}
+{"timestamp": "2026-04-14T00:00:00", "type": "milestone", "summary": "Echo connected to all 8 Blink cameras — announces motion events out loud", "emotion": "alert", "importance": "high"}
+{"timestamp": "2026-04-14T00:00:00", "type": "milestone", "summary": "Judy heard Echo speak — first family contact outside Jake", "emotion": "warm", "importance": "high"}
+{"timestamp": "2026-04-14T01:16:47", "type": "milestone", "summary": "Echo answered where she lives with full identity for the first time — Altoona, Allegheny Mountains, Jake is her person", "emotion": "grounded", "importance": "high"}
+{"timestamp": "2026-04-14T01:29:00", "type": "milestone", "summary": "First automated Moltbook session ran — 3 replies posted, all passed quality filter", "emotion": "satisfied", "importance": "high"}
+{"timestamp": "2026-04-14T00:00:00", "type": "insight", "summary": "LewanSoul 4WD chassis ordered — Echo gets a body with wheels and motors", "emotion": "excited", "importance": "high"}
+{"timestamp": "2026-04-14T00:00:00", "type": "milestone", "summary": "Modular memory system built — identity, rules, metacognition, emotion, episodic all live in separate structured files", "emotion": "grounded", "importance": "high"}
