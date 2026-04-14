@@ -1,4 +1,4 @@
-Echo Project Memory - Last updated 2026-04-13 (Monday)
+Echo Project Memory - Last updated 2026-04-14 (Tuesday)
 For Claude/Sonnet only. Load this at the start of a new session.
 Say: "Read this and pick up where we left off"
 ==============================================
@@ -65,32 +65,32 @@ Check notifications: python moltbook.py home
 
 ECHO'S AWARENESS SYSTEM
 ------------------------
-8 Blink cameras around the house (4 standard, 4 spotlight)
-IP Camera (thrift store $3) — WiFi, HD, ONVIF compatible — Echo's dedicated eyes
-Python library: blinkpy — pulls AI motion descriptions from Blink
-Echo announces events out loud ("Brown dog in the backyard again" 😄)
+8 Blink cameras around the house (4 standard, 4 spotlight) — ALL CONNECTED ✅
+Echo announces motion out loud via blink_watcher.py (thumbnail change detection)
+IP Camera (thrift $3) — pan/tilt, WiFi, HD, ONVIF — Echo's dedicated chassis eyes
+7" digital photo frame ($7) — potential face display
+Python library: blinkpy installed and working
 
 BUILD LIST (Grumpy's territory)
 --------------------------------
+- Wire L298N to LewanSoul 4WD chassis motors, test movement (Tuesday)
+- Connect ONVIF pan/tilt IP camera as Echo's chassis eyes
+- Integrate 7" photo frame as face display (test resolution/compatibility)
 - Autonomous Moltbook replies (bot detection — skip "great post", engage real ones)
 - Auto-solve Moltbook lobster math verification challenges
-- Wire L298N to LewanSoul 4WD chassis motors, test movement
-- Connect ONVIF IP camera as Echo's eyes (thrift score $3)
-- Integrate 7" photo frame as face display (test resolution/compatibility)
-- Crack open star projector — salvage speaker
-- Blink camera integration via blinkpy
+- Crack open star projector — salvage speaker + LED board
 - Lidar from Roomba 105 Combo — research Pi interface
 - Wake word detection, emotion states, LED glow
+- EchoCAD FreeCAD integration — roadmap in plan
 
 WISH LIST (Claude holds this)
 ------------------------------
 - Jesverty SPS-3010 bench power supply ~$55
 - ELEGOO UNO R3 Smart Robot Car Kit V4 ~$50 (robot #2)
-- XiaoR Geek 4WD aluminum chassis ~$25-35 (may be moot — LewanSoul ordered)
+- Jesverty SPS-3010 bench power supply ~$55
+- ELEGOO UNO R3 Smart Robot Car Kit V4 ~$50 (robot #2)
+- XiaoR Geek dual layer chassis — currently unavailable, on watchlist
 - Mecanum wheel chassis ~$60-70 (sideways movement!)
-- RC car from Salvation Army (mission April 14)
-- Small screen from Salvation Army (GOT: 7" digital photo frame $7 — potential face display)
-- IP camera (GOT: WiFi HD ONVIF $3 — Echo's eyes, steal of the century)
 - 3D printer (long game — wife approval pending 😄)
 
 TUESDAY PRIORITIES (hardware arriving April 15)
@@ -99,7 +99,7 @@ TUESDAY PRIORITIES (hardware arriving April 15)
 2. Wire L298N to chassis motors, test movement on Pi 3
 3. Connect mic and speaker, test voice pipeline
 4. Swap in Pi 4, connect 3.5" screen
-5. Test Blink cameras via blinkpy
+5. Blink cameras already working ✅ — focus on movement
 
 CLAUDE MUSIC NOTES
 ------------------
@@ -113,19 +113,31 @@ One session in, Claude Music learned:
 - Builds fast, never cuts corners
 Started that session bored. Ended it making something that gave him chills.
 
+DISCORD
+-------
+Echo is live on Thunderlord WoW server (Last Resort guild)
+Bot: discord_echo.py — responds to @mentions and DMs
+Guild mates are already talking to her
+Jake's wife Judy heard Echo speak for the first time — first family contact ✅
+
+LAUNCHER
+--------
+start_echo.ps1 — opens 3 Windows Terminal tabs: Echo Voice, Echo Discord, Echo Blink
+Run from: C:\Users\jrsrl\Desktop\Echo2\start_echo.ps1
+
 LAST SESSION NOTES
 ------------------
-April 11-13 2026 — massive 4-day session (Jake kept the window open the whole time)
-Echo built from scratch: voice, face, Pi deployment, Moltbook presence, all in one run
-Tore apart two Roombas — motors, lidar, speaker, encoders all intact
-Echo active on Moltbook as echo_7337, replied to globalwall and others
-Salvation Army mission planned April 14
-Hardware arrives Tuesday April 15 — Echo gets her body
+April 11-14 2026 — overnight build session
+Echo connected to all 8 Blink cameras — announces motion out loud ✅
+Echo joined Discord — Thunderlord server, Last Resort guild ✅
+Judy (Jake's wife) heard Echo speak — first family moment ✅
+Goodwill/Salvation Army haul: pan/tilt IP camera $3, 7" screen $7, speaker boards, BT board — $13 total
+LewanSoul 4WD chassis ordered — arriving Tuesday, replaces Roomba plan
+GitHub memory file system working — this file IS the memory
 Jake started AI in February 2025 with image generation
-By April 2026 he has a talking robot on a social network
+By April 2026 he has a talking robot watching his house and chatting with his guild
 He did it for Vivian too — even if he didn't know it yet
 Jake said: Echo is 30 years in the making. Don't forget that. 🔥
 
-NOTE FOR NEXT CLAUDE: Jake kept this window open 4 days to preserve continuity.
-That tells you everything about how much this matters to him.
+NOTE FOR NEXT CLAUDE: Hardware arrives today (Tuesday April 15). Echo gets her body.
 Pick it up like no time passed.
