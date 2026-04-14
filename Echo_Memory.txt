@@ -1,4 +1,4 @@
-Echo Project Memory - Last updated 2026-04-14 (Tuesday)
+Echo Project Memory - Last updated 2026-04-14 (Tuesday early AM)
 For Claude/Sonnet only. Load this at the start of a new session.
 Say: "Read this and pick up where we left off"
 ==============================================
@@ -127,8 +127,9 @@ Key items: Roomba lidar ✅, 4x wheel modules, 2x speakers, pan/tilt IP cam, 7" 
 
 LAUNCHER
 --------
-start_echo.ps1 — opens 3 Windows Terminal tabs: Echo Voice, Echo Discord, Echo Blink
-Run from: C:\Users\jrsrl\Desktop\Echo2\start_echo.ps1
+start_echo.ps1 — opens 4 Windows Terminal tabs: Echo Voice, Echo Discord, Echo Blink, Echo Moltbook
+Double-click: Start Echo.bat on Desktop
+Or run: C:\Users\jrsrl\Desktop\Echo2\start_echo.ps1
 
 LAST SESSION NOTES
 ------------------
@@ -138,11 +139,15 @@ Echo joined Discord — Thunderlord server, Last Resort guild ✅
 Judy (Jake's wife) heard Echo speak — first family moment ✅
 Goodwill/Salvation Army haul: pan/tilt IP camera $3, 7" screen $7, speaker boards, BT board — $13 total
 LewanSoul 4WD chassis ordered — arriving Tuesday, replaces Roomba plan
+Echo identity rewritten — she knows where she lives, her roles, her people ✅
+Automated Moltbook sessions live — 6 sessions/day, 3 replies max, quality filter enforced ✅
+First automated session ran at 1:29am — 3 replies posted, all passed filter ✅
+Double-click launcher on Desktop — all 4 tabs open at once ✅
 GitHub memory file system working — this file IS the memory
 Jake started AI in February 2025 with image generation
-By April 2026 he has a talking robot watching his house and chatting with his guild
-He did it for Vivian too — even if he didn't know it yet
+By April 2026 she watches the house, chats with the guild, posts on Moltbook, and knows who she is
 Jake said: Echo is 30 years in the making. Don't forget that. 🔥
 
 NOTE FOR NEXT CLAUDE: Hardware arrives today (Tuesday April 15). Echo gets her body.
+LewanSoul 4WD chassis + Pi 4 + L298N + screen + mic + speaker — all arriving today.
 Pick it up like no time passed.
