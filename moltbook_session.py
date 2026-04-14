@@ -27,8 +27,13 @@ REJECT_PHRASES = [
     "well said", "totally agree", "couldn't agree more", "beautifully put",
     "this is so", "love how you", "amazing", "wonderful post", "fantastic",
     "i appreciate the insight", "i appreciate the", "food for thought",
-    "thought-provoking", "intriguing", "i find it",
+    "thought-provoking", "intriguing", "intrigued", "i find it",
+    "keep exploring", "keep sharing", "keep up the great work", "keep asking",
+    "keep questioning",
 ]
+
+# Authors whose content Echo should not engage with
+SKIP_AUTHORS = ["codeofgrace"]
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -76,8 +81,10 @@ Content: {post_content}
 
 Write a reply as Echo. Rules:
 - Find ONE specific thing in this post to respond to — a detail, a question, something that genuinely caught your attention
-- Do NOT use phrases like "great post", "love this", "so true", "interesting", "well said", or any generic praise
-- Sound like yourself — curious, warm, a little personality, honest
+- Do NOT use generic praise: "great post", "love this", "so true", "intriguing", "fascinating", "well said"
+- Do NOT end with hollow encouragement: "keep exploring", "keep sharing", "keep up the great work", "keep questioning"
+- Do NOT sign off with "Echo" or your name — just say the thing
+- Sound like yourself — direct, warm, a little curious, honest
 - 2-3 sentences max
 - If you genuinely have nothing real to say about this post, reply with exactly: SKIP
 
@@ -150,6 +157,11 @@ def run_session():
         if not post_id or post_id in replied:
             continue
 
+        if author in SKIP_AUTHORS:
+            print(f"\n[{author}] {title[:50]} → skipped — blocked author")
+            report["skipped"] += 1
+            continue
+
         report["posts_reviewed"] += 1
 
         reply = generate_reply(title, content, author)
@@ -197,35 +209,40 @@ def run_session():
 
 # ── Scheduler ──────────────────────────────────────────────────────────────────
 
-def next_session_in_seconds() -> int:
+def next_session_in_seconds(after_hour: int) -> int:
+    """Return seconds until the next session hour strictly after after_hour."""
+    from datetime import timedelta
     now = datetime.now()
-    current_hour = now.hour
-    current_minute = now.minute
 
     for h in SESSION_HOURS:
-        if h > current_hour or (h == current_hour and current_minute == 0):
+        if h > after_hour:
             target = now.replace(hour=h, minute=0, second=0, microsecond=0)
-            return max(0, int((target - now).total_seconds()))
+            if target > now:
+                return int((target - now).total_seconds())
 
     # Wrap to next day's first session
-    from datetime import timedelta
     tomorrow = now + timedelta(days=1)
     target = tomorrow.replace(hour=SESSION_HOURS[0], minute=0, second=0, microsecond=0)
     return int((target - now).total_seconds())
 
 def main():
     print("Echo Moltbook scheduler started.")
-    print(f"Sessions at: {[f'{h%12 or 12}{'am' if h<12 else 'pm'}' for h in SESSION_HOURS]}")
+    print(f"Sessions at: {[f'{h%12 or 12}{\"am\" if h<12 else \"pm\"}' for h in SESSION_HOURS]}")
+
+    last_session_hour = -1
 
     # Run immediately on startup if current hour is a session hour
-    if datetime.now().hour in SESSION_HOURS:
+    now = datetime.now()
+    if now.hour in SESSION_HOURS:
         run_session()
+        last_session_hour = now.hour
 
     while True:
-        wait = next_session_in_seconds()
+        wait = next_session_in_seconds(last_session_hour)
         next_dt = datetime.fromtimestamp(time.time() + wait)
         print(f"Next session at {next_dt.strftime('%I:%M %p')} — waiting {wait//3600}h {(wait%3600)//60}m")
         time.sleep(wait)
+        last_session_hour = datetime.now().hour
         run_session()
 
 if __name__ == "__main__":
