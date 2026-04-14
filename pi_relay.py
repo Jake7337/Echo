@@ -140,4 +140,4 @@ if __name__ == "__main__":
     start_job("pi_speak")
     start_job("echo_voice")
     print("Pi relay running on port 5101")
-    sio.run(app, host="0.0.0.0", port=5101, debug=False)
+    sio.run(app, host="0.0.0.0", port=5101, debug=False, allow_unsafe_werkzeug=True)
