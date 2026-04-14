@@ -47,6 +47,43 @@ def build_history_text(conversations: list) -> str:
         lines.append(f"Jake: {turn['user']}")
         lines.append(f"Echo: {turn['echo']}")
     return "\n".join(lines)
+# — Retrieval Trigger Logic ————————————————————————————————
+
+RETRIEVAL_TRIGGERS = [
+    "when did", "when was", "when were",
+    "have i ever", "did i ever",
+    "last time", "first time",
+    "what happened when",
+    "remind me what", "remind me when",
+    "how did i feel", "how was i feeling",
+    "who did i", "who was i with",
+    "did you ever", "have you ever"
+]
+
+KNOWN_PEOPLE = ["lydea", "rachael", "judy", "john", "chance"]
+
+def should_trigger_retrieval(user_input: str) -> bool:
+    text = user_input.lower()
+
+    if any(phrase in text for phrase in RETRIEVAL_TRIGGERS):
+        return True
+
+    if any(name in text for name in KNOWN_PEOPLE):
+        return True
+
+    if "i remember" in text or "do you remember" in text:
+        return True
+
+    return False
+
+
+def format_retrieved_events(events):
+    if not events:
+        return ""
+    lines = ["Relevant past events:"]
+    for e in events:
+        lines.append(f"- {e['summary']} ({e['type']}, {e['timestamp']})")
+    return "\n".join(lines)
 
 # ── EchoState → prompt context ─────────────────────────────────────────────────
 
