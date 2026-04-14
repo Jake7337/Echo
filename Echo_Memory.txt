@@ -120,6 +120,11 @@ Bot: discord_echo.py — responds to @mentions and DMs
 Guild mates are already talking to her
 Jake's wife Judy heard Echo speak for the first time — first family contact ✅
 
+PARTS INVENTORY
+---------------
+Full parts list in parts_inventory.md — Roomba donor parts, thrift haul, Tuesday order
+Key items: Roomba lidar ✅, 4x wheel modules, 2x speakers, pan/tilt IP cam, 7" frame
+
 LAUNCHER
 --------
 start_echo.ps1 — opens 3 Windows Terminal tabs: Echo Voice, Echo Discord, Echo Blink
