@@ -227,7 +227,8 @@ def next_session_in_seconds(after_hour: int) -> int:
 
 def main():
     print("Echo Moltbook scheduler started.")
-    print(f"Sessions at: {[f'{h%12 or 12}{\"am\" if h<12 else \"pm\"}' for h in SESSION_HOURS]}")
+    session_labels = [f"{h%12 or 12}{'am' if h < 12 else 'pm'}" for h in SESSION_HOURS]
+    print(f"Sessions at: {session_labels}")
 
     last_session_hour = -1
 
