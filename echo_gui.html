@@ -480,12 +480,15 @@ const PI_URL = "http://192.168.68.84:5101";
 
 async function pollPiStatus() {
   try {
-    const resp = await fetch(`${PI_URL}/api/jobs`, {signal: AbortSignal.timeout(3000)});
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 4000);
+    const resp = await fetch(`${PI_URL}/api/jobs`, {signal: controller.signal});
+    clearTimeout(timer);
     const jobs = await resp.json();
-    updatePiStatus("online");
     for (const [id, job] of Object.entries(jobs)) {
       updateJobDot("pi_" + id, job.status);
     }
+    updatePiStatus("online");
   } catch(e) {
     updatePiStatus("offline");
   }
@@ -888,11 +891,10 @@ document.addEventListener("fullscreenchange", () => {
 });
 
 // ── Init ───────────────────────────────────────────────────────────────────
-initJobs();
+initJobs().then(() => pollPiStatus());
 refreshMoltbook();
 drawFace();
 pollState();
-pollPiStatus();
 setInterval(refreshMoltbook, 60000);
 setInterval(pollState, 10000);
 setInterval(pollPiStatus, 5000);
