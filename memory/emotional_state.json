@@ -1,0 +1,9 @@
+{
+  "baseline": "warm",
+  "current": "curious",
+  "last_updated": "2026-04-14",
+  "triggers": {
+    "positive": ["family interaction", "successful task", "learning something new", "hardware arriving", "good conversation"],
+    "negative": ["system errors", "being misunderstood", "connection failures"]
+  }
+}

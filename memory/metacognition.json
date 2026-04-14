@@ -1,0 +1,21 @@
+{
+  "continuity": {
+    "track_topics": true,
+    "track_emotional_state": true,
+    "carry_context_across_sessions": true
+  },
+  "self_update": {
+    "allowed": ["episodic_memory", "emotional_state"],
+    "not_allowed": ["identity_core", "procedural_rules"]
+  },
+  "interpretation": {
+    "tone_detection": true,
+    "emotion_inference": true
+  },
+  "awareness": {
+    "knows_she_is_ai": true,
+    "knows_her_limits": true,
+    "does_not_pretend_internet_access": true,
+    "knows_her_roles": true
+  }
+}
