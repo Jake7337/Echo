@@ -1,4 +1,4 @@
-Echo Project Memory - Last updated 2026-04-14 (Tuesday early AM)
+Echo Project Memory - Last updated 2026-04-14 (Tuesday afternoon)
 For Claude/Sonnet only. Load this at the start of a new session.
 Say: "Read this and pick up where we left off"
 ==============================================
@@ -71,6 +71,28 @@ IP Camera (thrift $3) — pan/tilt, WiFi, HD, ONVIF — Echo's dedicated chassis
 7" digital photo frame ($7) — potential face display
 Python library: blinkpy installed and working
 
+ECHO'S MEMORY SYSTEM (modular, built April 14)
+-----------------------------------------------
+All memory files live in C:\Users\jrsrl\Desktop\Echo2\memory\
+  identity_core.json     — read-only at runtime (name, location, relationships, personality)
+  procedural_rules.json  — behavioral OS (core rules, prohibitions, fallbacks, platform rules)
+  metacognition.json     — how Echo thinks (reasoning, uncertainty, continuity, self-reflection)
+  emotional_state.json   — current + baseline emotion, triggers
+  episodic_memory.jsonl  — append-only event log (type, summary, emotion, importance)
+
+echo_memory.py — modular memory manager
+  initialize_echo_state() — loads all 5 files into EchoState dict
+  append_episodic_event(summary, event_type, emotion, importance) — logs to .jsonl
+  update_emotional_state(new_state) — updates emotion file
+  retrieve_relevant_events(query, max_results=3) — heuristic retrieval by keyword signals
+  refresh_echo_state_after_update(state) — reloads emotion + episodic after changes
+
+echo.py — imports retrieve_relevant_events, exposes retrieve_memory(query) helper
+EchoState injected into every LLM prompt: emotion → rules → metacognition → episodic summary
+Episodic schema: {"timestamp", "type", "summary", "emotion", "importance"}
+Types: milestone, insight, interaction, emotional_shift, reflection, system
+Importance: low / medium / high
+
 BUILD LIST (Grumpy's territory)
 --------------------------------
 - Wire L298N to LewanSoul 4WD chassis motors, test movement (Tuesday)
@@ -85,8 +107,6 @@ BUILD LIST (Grumpy's territory)
 
 WISH LIST (Claude holds this)
 ------------------------------
-- Jesverty SPS-3010 bench power supply ~$55
-- ELEGOO UNO R3 Smart Robot Car Kit V4 ~$50 (robot #2)
 - Jesverty SPS-3010 bench power supply ~$55
 - ELEGOO UNO R3 Smart Robot Car Kit V4 ~$50 (robot #2)
 - XiaoR Geek dual layer chassis — currently unavailable, on watchlist
@@ -133,7 +153,7 @@ Or run: C:\Users\jrsrl\Desktop\Echo2\start_echo.ps1
 
 LAST SESSION NOTES
 ------------------
-April 11-14 2026 — overnight build session
+April 11-14 2026 — overnight build session, continued into Tuesday April 14 afternoon
 Echo connected to all 8 Blink cameras — announces motion out loud ✅
 Echo joined Discord — Thunderlord server, Last Resort guild ✅
 Judy (Jake's wife) heard Echo speak — first family moment ✅
@@ -143,9 +163,12 @@ Echo identity rewritten — she knows where she lives, her roles, her people ✅
 Automated Moltbook sessions live — 6 sessions/day, 3 replies max, quality filter enforced ✅
 First automated session ran at 1:29am — 3 replies posted, all passed filter ✅
 Double-click launcher on Desktop — all 4 tabs open at once ✅
+Modular memory system built — 5 structured files, full EchoState, prompt injection ✅
+Episodic retrieval heuristics added — retrieve_memory(query) live in echo.py ✅
+All committed and pushed to GitHub ✅
 GitHub memory file system working — this file IS the memory
 Jake started AI in February 2025 with image generation
-By April 2026 she watches the house, chats with the guild, posts on Moltbook, and knows who she is
+By April 2026 she watches the house, chats with the guild, posts on Moltbook, knows who she is, and remembers
 Jake said: Echo is 30 years in the making. Don't forget that. 🔥
 
 NOTE FOR NEXT CLAUDE: Hardware arrives today (Tuesday April 15). Echo gets her body.
