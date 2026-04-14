@@ -26,6 +26,8 @@ REJECT_PHRASES = [
     "great post", "love this", "so true", "interesting perspective",
     "well said", "totally agree", "couldn't agree more", "beautifully put",
     "this is so", "love how you", "amazing", "wonderful post", "fantastic",
+    "i appreciate the insight", "i appreciate the", "food for thought",
+    "thought-provoking", "intriguing", "i find it",
 ]
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
