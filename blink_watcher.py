@@ -72,26 +72,60 @@ async def setup_blink():
 
     return blink
 
+def build_announcement(camera_name: str, cv_detection: list) -> str:
+    """Turn camera name + cv_detection list into a natural announcement."""
+    if not cv_detection:
+        return f"Motion detected on {camera_name}."
+    objects = cv_detection
+    if len(objects) == 1:
+        label = objects[0]
+    else:
+        label = ", ".join(objects[:-1]) + " and " + objects[-1]
+    return f"{label.capitalize()} detected on {camera_name}."
+
+
 async def watch(blink: Blink):
-    seen = set()
+    from blinkpy import api as blink_api
 
     print("Echo is watching the cameras...\n")
 
-    # Seed thumbnails so we only announce changes, not startup state
+    # Seed with current latest media ID so we only announce new events
     await blink.refresh()
-    last_thumbnails = {name: cam.thumbnail for name, cam in blink.cameras.items()}
-    print(f"Watching {len(last_thumbnails)} cameras...", flush=True)
+    print(f"Watching {len(blink.cameras)} cameras...", flush=True)
+
+    seen_ids: set = set()
+
+    # Seed seen_ids with anything already in the last 5 minutes
+    seed_data = await blink_api.request_videos(blink, time=time.time() - 300, page=0)
+    if isinstance(seed_data, dict):
+        for item in seed_data.get("media", []):
+            seen_ids.add(item["id"])
+    print(f"Seeded {len(seen_ids)} recent event IDs.", flush=True)
 
     while True:
         await asyncio.sleep(POLL_SECONDS)
-        await blink.refresh()
 
-        for name, camera in blink.cameras.items():
-            new_thumb = camera.thumbnail
-            if new_thumb and new_thumb != last_thumbnails.get(name):
-                last_thumbnails[name] = new_thumb
-                print(f"Motion on {name}", flush=True)
-                speak(f"Motion detected on {name}.")
+        data = await blink_api.request_videos(blink, time=time.time() - POLL_SECONDS - 10, page=0)
+        if not isinstance(data, dict):
+            continue
+
+        for item in data.get("media", []):
+            item_id = item.get("id")
+            if not item_id or item_id in seen_ids:
+                continue
+            seen_ids.add(item_id)
+
+            camera_name = item.get("device_name", "unknown camera")
+            metadata_raw = item.get("metadata") or "{}"
+            try:
+                metadata = json.loads(metadata_raw)
+            except Exception:
+                metadata = {}
+
+            cv_detection = metadata.get("cv_detection", [])
+            announcement = build_announcement(camera_name, cv_detection)
+            print(f"Motion on {camera_name}: {cv_detection}", flush=True)
+            speak(announcement)
 
 # ── Main ───────────────────────────────────────────────────────────────────────
 
