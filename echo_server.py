@@ -54,12 +54,8 @@ JOBS = {
         "proc":  None,
         "status": "stopped",
     },
-    "voice": {
-        "label": "Echo Voice",
-        "cmd":   ["python", os.path.join(BASE_DIR, "echo.py")],
-        "proc":  None,
-        "status": "stopped",
-    },
+    # Voice runs in its own terminal for audio output — not managed here
+    # Run manually: python echo.py
 }
 
 
@@ -138,7 +134,7 @@ def api_restart_job(job_id):
 
 @app.route("/api/start_all", methods=["POST"])
 def api_start_all():
-    for job_id in ("moltbook", "discord", "blink"):
+    for job_id in JOBS:
         start_job(job_id)
     return jsonify({"status": "ok"})
 
