@@ -3,11 +3,9 @@ echo_identify.py
 Snap the 'Echo' Blink camera and identify who's in frame.
 
 Setup:
-  1. pip install cmake dlib face_recognition
-     (if dlib fails on Windows: pip install deepface instead, see fallback below)
-  2. Drop reference photos into known_faces/ folder — one photo per person.
-     Name the file after the person: jake.jpg, rachael.jpg, etc.
-  3. Run once to verify: python echo_identify.py
+  1. pip install opencv-python opencv-contrib-python
+  2. Drop reference photos into known_faces/ — one per person, named after them: jake.jpg
+  3. Test: python echo_identify.py
 
 Called by echo_server.py /api/identify endpoint.
 """
@@ -17,43 +15,74 @@ import io
 import json
 import asyncio
 import time
+import tempfile
+import numpy as np
 
-BASE_DIR         = os.path.dirname(os.path.abspath(__file__))
-KNOWN_FACES_DIR  = os.path.join(BASE_DIR, "known_faces")
-SESSION_FILE     = os.path.join(BASE_DIR, "blink_session.json")
-CAMERA_NAME      = "Echo"
+BASE_DIR        = os.path.dirname(os.path.abspath(__file__))
+KNOWN_FACES_DIR = os.path.join(BASE_DIR, "known_faces")
+SESSION_FILE    = os.path.join(BASE_DIR, "blink_session.json")
+CAMERA_NAME     = "Echo"
 
-# ── Load known face encodings once at import ──────────────────────────────────
+# Haar cascade for face detection (bundled with opencv)
+_cascade = None
+_recognizer = None
+_label_map  = {}   # int label -> name
 
-_known_encodings = {}   # name -> encoding
+def _get_cascade():
+    global _cascade
+    if _cascade is None:
+        import cv2
+        _cascade = cv2.CascadeClassifier(
+            cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
+        )
+    return _cascade
 
 def _load_known_faces():
-    global _known_encodings
-    if not os.path.exists(KNOWN_FACES_DIR):
-        print("[identify] known_faces/ not found — no faces enrolled")
-        return
+    """Build and train the LBPH face recognizer from known_faces/ images."""
+    global _recognizer, _label_map
     try:
-        import face_recognition
+        import cv2
     except ImportError:
-        print("[identify] face_recognition not installed — run: pip install cmake dlib face_recognition")
+        print("[identify] opencv not installed — run: pip install opencv-python opencv-contrib-python")
         return
 
-    for fname in os.listdir(KNOWN_FACES_DIR):
-        if fname.lower().endswith((".jpg", ".jpeg", ".png")):
-            name = os.path.splitext(fname)[0]
-            path = os.path.join(KNOWN_FACES_DIR, fname)
-            try:
-                img  = face_recognition.load_image_file(path)
-                encs = face_recognition.face_encodings(img)
-                if encs:
-                    _known_encodings[name] = encs[0]
-                    print(f"[identify] Enrolled: {name}")
-                else:
-                    print(f"[identify] No face found in {fname} — skipping")
-            except Exception as e:
-                print(f"[identify] Could not load {fname}: {e}")
+    if not os.path.exists(KNOWN_FACES_DIR):
+        return
 
-    print(f"[identify] {len(_known_encodings)} face(s) enrolled: {list(_known_encodings.keys())}")
+    cascade   = _get_cascade()
+    faces     = []
+    labels    = []
+    label_idx = 0
+
+    for fname in sorted(os.listdir(KNOWN_FACES_DIR)):
+        if not fname.lower().endswith((".jpg", ".jpeg", ".png")):
+            continue
+        name = os.path.splitext(fname)[0]
+        path = os.path.join(KNOWN_FACES_DIR, fname)
+        img  = cv2.imread(path)
+        if img is None:
+            print(f"[identify] Could not read {fname}")
+            continue
+        gray     = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        detected = cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5)
+        if len(detected) == 0:
+            print(f"[identify] No face detected in {fname} — try a clearer photo")
+            continue
+        x, y, w, h = detected[0]
+        face_roi = gray[y:y+h, x:x+w]
+        face_roi = cv2.resize(face_roi, (200, 200))
+        faces.append(face_roi)
+        labels.append(label_idx)
+        _label_map[label_idx] = name
+        label_idx += 1
+        print(f"[identify] Enrolled: {name}")
+
+    if faces:
+        _recognizer = cv2.face.LBPHFaceRecognizer_create()
+        _recognizer.train(faces, np.array(labels))
+        print(f"[identify] Recognizer trained on {len(faces)} face(s): {list(_label_map.values())}")
+    else:
+        print("[identify] No faces enrolled — add photos to known_faces/")
 
 _load_known_faces()
 
@@ -89,21 +118,21 @@ async def _snap_blink() -> bytes | None:
         print(f"[identify] Camera '{CAMERA_NAME}' not found. Available: {list(blink.cameras.keys())}")
         return None
 
-    # Trigger a fresh snapshot
     try:
         await cam.snap_picture()
-        await asyncio.sleep(3)   # give camera time to process
+        await asyncio.sleep(3)
         await blink.refresh()
     except Exception as e:
-        print(f"[identify] Snap failed: {e}")
+        print(f"[identify] Snap warning: {e}")
 
     thumb_url = cam.thumbnail
     if not thumb_url:
         return None
 
     try:
-        resp = blink.auth.session.get(thumb_url, timeout=10)
-        return resp.content
+        # blinkpy uses aiohttp — must await
+        async with blink.auth.session.get(thumb_url) as resp:
+            return await resp.read()
     except Exception as e:
         print(f"[identify] Thumbnail download failed: {e}")
         return None
@@ -112,32 +141,39 @@ async def _snap_blink() -> bytes | None:
 # ── Face recognition ──────────────────────────────────────────────────────────
 
 def _recognize(img_bytes: bytes) -> str:
-    """Compare image bytes against known faces. Returns name or 'unknown'."""
+    """Detect and recognize face in image bytes using OpenCV LBPH."""
     try:
-        import face_recognition
+        import cv2
     except ImportError:
         return "unknown"
 
-    if not _known_encodings:
-        return "someone"   # camera worked, just no faces enrolled yet
+    if _recognizer is None or not _label_map:
+        return "someone"
 
-    try:
-        img  = face_recognition.load_image_file(io.BytesIO(img_bytes))
-        encs = face_recognition.face_encodings(img)
-
-        if not encs:
-            return "no_face"
-
-        unknown_enc = encs[0]
-        for name, known_enc in _known_encodings.items():
-            match = face_recognition.compare_faces([known_enc], unknown_enc, tolerance=0.55)
-            if match[0]:
-                return name
-
+    img_array = np.frombuffer(img_bytes, dtype=np.uint8)
+    img       = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
+    if img is None:
         return "unknown"
-    except Exception as e:
-        print(f"[identify] Recognition error: {e}")
-        return "unknown"
+
+    gray     = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    cascade  = _get_cascade()
+    detected = cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5)
+
+    if len(detected) == 0:
+        print("[identify] No face detected in snapshot")
+        return "no_face"
+
+    x, y, w, h   = detected[0]
+    face_roi     = gray[y:y+h, x:x+w]
+    face_roi     = cv2.resize(face_roi, (200, 200))
+
+    label, confidence = _recognizer.predict(face_roi)
+    print(f"[identify] Prediction: label={label} confidence={confidence:.1f}")
+
+    # Lower confidence = better match in LBPH. Threshold ~80 is reliable.
+    if confidence < 80:
+        return _label_map.get(label, "unknown")
+    return "unknown"
 
 
 # ── Public interface ──────────────────────────────────────────────────────────
@@ -145,7 +181,7 @@ def _recognize(img_bytes: bytes) -> str:
 def identify_person(timeout: int = 12) -> str:
     """
     Snap Echo camera and return who's in frame.
-    Returns: name string, 'unknown', 'no_face', or 'error'
+    Returns: name string, 'unknown', 'no_face', 'timeout', or 'error'
     Synchronous — handles async internally.
     """
     try:
@@ -155,6 +191,7 @@ def identify_person(timeout: int = 12) -> str:
         )
         loop.close()
     except asyncio.TimeoutError:
+        print("[identify] Timed out waiting for snap")
         return "timeout"
     except Exception as e:
         print(f"[identify] Snap error: {e}")
@@ -169,6 +206,6 @@ def identify_person(timeout: int = 12) -> str:
 # ── Standalone test ───────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    print("Testing identify...")
+    print("Testing identify — sit in front of the Echo camera...")
     result = identify_person()
     print(f"Result: {result}")
