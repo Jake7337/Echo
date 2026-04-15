@@ -129,7 +129,7 @@ def handle_desk_motion(last_greeted: dict):
 
 # ── Outdoor cameras ───────────────────────────────────────────────────────────
 
-def should_announce(camera_name: str, cv: list, last_announced: dict, cfg: dict) -> tuple[bool, str]:
+def should_announce(camera_name: str, cv: list, description: str, last_announced: dict, cfg: dict) -> tuple[bool, str]:
     """
     Returns (should_announce, reason_or_text).
     Applies all filtering rules and returns announcement text or skip reason.
@@ -152,40 +152,40 @@ def should_announce(camera_name: str, cv: list, last_announced: dict, cfg: dict)
         elapsed = int(now - last_announced.get(camera_name, 0))
         return False, f"cooldown ({elapsed}s / {cooldown}s)"
 
+    # Quiet hours — skip everything unless there's a person
+    if quiet:
+        has_person_desc = description and "person" in description.lower()
+        has_person_cv   = cv and any("person" in o.lower() for o in cv)
+        if not has_person_desc and not has_person_cv:
+            return False, "quiet hours — no person"
+
     objects = [o.lower() for o in cv] if cv else []
     has_person  = any("person" in o for o in objects)
     has_vehicle = any(o in ("vehicle", "car", "truck") for o in objects)
     has_animal  = any(o in skip_objects for o in objects)
 
-    # Quiet hours — only announce persons
-    if quiet and not has_person:
-        return False, "quiet hours — no person"
+    # If Blink gave us a description, trust it and announce
+    if description:
+        return True, description
 
-    # Person detected
+    # No description — use cv_detection if available
     if has_person:
         if is_front:
-            return True, f"Someone I don't recognize is at the {camera_name}."
-        if after_dark:
-            return True, f"Person detected on {camera_name}."
+            return True, f"Someone at the {camera_name}."
         return True, f"Motion on {camera_name} — someone's out there."
 
-    # Vehicle
     if has_vehicle:
         if after_dark or is_front:
-            return True, f"A vehicle just pulled up on {camera_name}."
+            return True, f"A vehicle on {camera_name}."
         return False, "vehicle — daytime non-front skip"
 
-    # Known skip objects (animals etc.)
     if has_animal:
         if after_dark:
             return True, f"Motion on {camera_name}."
-        return False, f"animal — skip"
+        return False, "animal — daytime skip"
 
-    # General motion — after dark only
-    if after_dark:
-        return True, f"Motion on {camera_name}."
-
-    return False, "routine daytime motion — skip"
+    # No cv data at all — announce generic motion (not quiet hours, not on cooldown)
+    return True, f"Motion on {camera_name}."
 
 # ── cv_detection lookup ───────────────────────────────────────────────────────
 
@@ -288,14 +288,13 @@ async def watch(blink: Blink):
 
             # Outdoor camera — cv_detection + filter
             cv, description = await get_camera_event(blink, name)
-            announce, text = should_announce(name, cv, last_announced, cfg)
+            print(f"[{name}] cv={cv} description={repr(description)}", flush=True)
+            announce, text = should_announce(name, cv, description, last_announced, cfg)
 
             if announce:
                 last_announced[name] = time.time()
-                # Use Blink's AI description if available, otherwise use generated text
-                speak_text = description if description else text
-                speak(speak_text)
-                print(f"[{name}] → {speak_text}", flush=True)
+                speak(text)
+                print(f"[{name}] → announced: {text}", flush=True)
             else:
                 print(f"[{name}] → skipped ({text})", flush=True)
 
