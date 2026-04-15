@@ -1,6 +1,7 @@
 moltbook_creds.json
 blink_creds.json
 blink_session.json
+echo_memories.txt
 __pycache__/
 *.pyc
 *.pyo

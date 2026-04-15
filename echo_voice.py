@@ -25,7 +25,9 @@ OLLAMA_MODEL  = "mistral:7b"
 IDENTITY_FILE = os.path.join(os.path.dirname(__file__), "identity.md")
 MEMORY_FILE   = os.path.join(os.path.dirname(__file__), "memory.json")
 PROJECT_MEMORY_FILE = os.path.join(os.path.dirname(__file__), "Echo_Memory.txt")
-MAX_HISTORY   = 20
+LIVED_MEMORY_FILE   = os.path.join(os.path.dirname(__file__), "echo_memories.txt")
+MAX_HISTORY         = 20
+MAX_LIVED_ENTRIES   = 100
 
 MIC_CARD      = 3   # Fifine Microphone
 SPEAKER_CARD  = 2   # USB AUDIO
@@ -57,6 +59,32 @@ def load_project_memory() -> str:
     except Exception as e:
         print(f"[voice] Could not load Echo_Memory.txt — {e}", flush=True)
         return ""
+
+def load_lived_memory() -> str:
+    """Load the last MAX_LIVED_ENTRIES lines from echo_memories.txt."""
+    try:
+        with open(LIVED_MEMORY_FILE, "r", encoding="utf-8") as f:
+            lines = [l.rstrip() for l in f if l.strip()]
+        recent = lines[-MAX_LIVED_ENTRIES:]
+        return "\n".join(recent)
+    except FileNotFoundError:
+        return ""
+    except Exception as e:
+        print(f"[voice] Could not load echo_memories.txt — {e}", flush=True)
+        return ""
+
+def append_lived_memory(user_input: str, response: str, person: str = ""):
+    """Append a one-line timestamped summary of this exchange to echo_memories.txt."""
+    ts      = datetime.now().strftime("%Y-%m-%d %H:%M")
+    speaker = person.capitalize() if person else "Jake"
+    u_short = user_input[:120].replace("\n", " ")
+    r_short = response[:120].replace("\n", " ")
+    entry   = f"[{ts}] {speaker}: \"{u_short}\" → Echo: \"{r_short}\"\n"
+    try:
+        with open(LIVED_MEMORY_FILE, "a", encoding="utf-8") as f:
+            f.write(entry)
+    except Exception as e:
+        print(f"[voice] Could not write echo_memories.txt — {e}", flush=True)
 
 
 # ── Memory ─────────────────────────────────────────────────────────────────────
@@ -185,13 +213,15 @@ def collect_identify(t: threading.Thread, wait: float = 8.0) -> str:
 
 # ── Turn ───────────────────────────────────────────────────────────────────────
 
-def handle_turn(user_input: str, conversations: list, project_memory: str = "", person: str = "") -> str:
+def handle_turn(user_input: str, conversations: list, project_memory: str = "", lived_memory: str = "", person: str = "") -> str:
     identity = load_identity()
     history  = build_history_text(conversations)
 
     system = identity
     if project_memory:
         system += f"\n\n--- PROJECT CONTEXT ---\n{project_memory}"
+    if lived_memory:
+        system += f"\n\n--- THINGS I REMEMBER ---\n{lived_memory}"
     if person:
         system += f"\nThe person speaking right now appears to be {person}."
 
@@ -212,6 +242,13 @@ def main():
     project_memory = load_project_memory()
     if project_memory:
         print("Project memory loaded.")
+    print("Loading lived memory...")
+    lived_memory = load_lived_memory()
+    if lived_memory:
+        entry_count = len(lived_memory.splitlines())
+        print(f"Lived memory loaded — {entry_count} entries.")
+    else:
+        print("No lived memory yet — this is a fresh start.")
     print("Echo is here.\n")
     speak("Echo is here.", voice)
     conversations = load_memory()
@@ -242,7 +279,8 @@ def main():
         person = collect_identify(id_thread)
         if person:
             print(f"[identify] Recognized: {person}")
-        response = handle_turn(user_input, conversations, project_memory=project_memory, person=person)
+        response = handle_turn(user_input, conversations, project_memory=project_memory, lived_memory=lived_memory, person=person)
+        append_lived_memory(user_input, response, person=person)
         print(f"Echo: {response}\n")
         set_face("talking")
         speak(response, voice)
