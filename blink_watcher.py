@@ -10,6 +10,7 @@ Outdoor cameras:
   Smart filtering — cooldown, quiet hours, after-dark, object type, face recognition
 """
 
+import sys
 import json
 import os
 import time
@@ -19,6 +20,8 @@ import requests
 from datetime import datetime
 from blinkpy.blinkpy import Blink
 from blinkpy.auth import Auth
+
+sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 BASE_DIR       = os.path.dirname(os.path.abspath(__file__))
 CREDS_FILE     = os.path.join(BASE_DIR, "blink_creds.json")
