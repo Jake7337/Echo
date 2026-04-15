@@ -24,6 +24,7 @@ OLLAMA_URL    = "http://192.168.68.65:11434/api/generate"
 OLLAMA_MODEL  = "mistral:7b"
 IDENTITY_FILE = os.path.join(os.path.dirname(__file__), "identity.md")
 MEMORY_FILE   = os.path.join(os.path.dirname(__file__), "memory.json")
+PROJECT_MEMORY_FILE = os.path.join(os.path.dirname(__file__), "Echo_Memory.txt")
 MAX_HISTORY   = 20
 
 MIC_CARD      = 3   # Fifine Microphone
@@ -47,6 +48,15 @@ def set_face(state: str):
 def load_identity() -> str:
     with open(IDENTITY_FILE, "r", encoding="utf-8") as f:
         return f.read().strip()
+
+def load_project_memory() -> str:
+    """Load Echo_Memory.txt — pulled from GitHub on every boot so always current."""
+    try:
+        with open(PROJECT_MEMORY_FILE, "r", encoding="utf-8") as f:
+            return f.read().strip()
+    except Exception as e:
+        print(f"[voice] Could not load Echo_Memory.txt — {e}", flush=True)
+        return ""
 
 
 # ── Memory ─────────────────────────────────────────────────────────────────────
@@ -153,7 +163,9 @@ def start_identify() -> threading.Thread:
     def _run():
         try:
             r = requests.post(IDENTIFY_URL, timeout=13)
-            result_box[0] = r.json().get("person", "unknown")
+            people = r.json().get("people", ["unknown"])
+            known  = [p for p in people if p not in ("unknown", "no_face", "timeout", "error", "someone")]
+            result_box[0] = known[0] if known else "unknown"
         except Exception:
             result_box[0] = "unknown"
 
@@ -173,18 +185,22 @@ def collect_identify(t: threading.Thread, wait: float = 8.0) -> str:
 
 # ── Turn ───────────────────────────────────────────────────────────────────────
 
-def handle_turn(user_input: str, conversations: list, person: str = "") -> str:
+def handle_turn(user_input: str, conversations: list, project_memory: str = "", person: str = "") -> str:
     identity = load_identity()
     history  = build_history_text(conversations)
 
-    person_ctx = f"\nThe person speaking right now appears to be {person}." if person else ""
+    system = identity
+    if project_memory:
+        system += f"\n\n--- PROJECT CONTEXT ---\n{project_memory}"
+    if person:
+        system += f"\nThe person speaking right now appears to be {person}."
 
     if history:
         prompt = f"CONVERSATION SO FAR:\n{history}\n\nJake: {user_input}\nEcho:"
     else:
         prompt = f"Jake: {user_input}\nEcho:"
 
-    return ask_ollama(identity + person_ctx, prompt)
+    return ask_ollama(system, prompt)
 
 
 # ── Main loop ──────────────────────────────────────────────────────────────────
@@ -192,6 +208,10 @@ def handle_turn(user_input: str, conversations: list, person: str = "") -> str:
 def main():
     print("Loading voice...")
     voice = PiperVoice.load(PIPER_MODEL)
+    print("Loading project memory...")
+    project_memory = load_project_memory()
+    if project_memory:
+        print("Project memory loaded.")
     print("Echo is here.\n")
     speak("Echo is here.", voice)
     conversations = load_memory()
@@ -222,7 +242,7 @@ def main():
         person = collect_identify(id_thread)
         if person:
             print(f"[identify] Recognized: {person}")
-        response = handle_turn(user_input, conversations, person=person)
+        response = handle_turn(user_input, conversations, project_memory=project_memory, person=person)
         print(f"Echo: {response}\n")
         set_face("talking")
         speak(response, voice)
