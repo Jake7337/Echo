@@ -203,8 +203,8 @@ def _recognize(img_bytes: bytes) -> str:
     label, confidence = _recognizer.predict(face_roi)
     print(f"[identify] Prediction: label={label} confidence={confidence:.1f}")
 
-    # Lower confidence = better match in LBPH. Blink thumbnails are compressed so threshold is looser.
-    if confidence < 140:
+    # Lower confidence = better match in LBPH. Add more training photos if getting wrong matches.
+    if confidence < 110:
         return _label_map.get(label, "unknown")
     return "unknown"
 
