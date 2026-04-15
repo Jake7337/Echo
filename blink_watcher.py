@@ -87,7 +87,7 @@ def identify_person_async() -> str:
     result = ["unknown"]
     def _run():
         try:
-            r = requests.post(IDENTIFY_URL, timeout=15)
+            r = requests.post(IDENTIFY_URL, timeout=35)
             result[0] = r.json().get("person", "unknown")
         except Exception as e:
             print(f"[identify] {e}", flush=True)
