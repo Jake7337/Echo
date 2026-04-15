@@ -20,6 +20,8 @@ from datetime import datetime
 
 # ── Config ─────────────────────────────────────────────────────────────────────
 
+from voice_identify import identify_voice
+
 OLLAMA_URL    = "http://192.168.68.65:11434/api/generate"
 OLLAMA_MODEL  = "mistral:7b"
 IDENTITY_FILE = os.path.join(os.path.dirname(__file__), "identity.md")
@@ -133,8 +135,8 @@ def speak(text: str, voice: PiperVoice = None):
         print(f"[voice] speak failed — {e}", flush=True)
 
 
-def listen() -> str | None:
-    """Listen for speech from the Fifine mic. Returns text or None."""
+def listen() -> tuple:
+    """Listen for speech from the Fifine mic. Returns (text, audio_data) or (None, None)."""
     r = sr.Recognizer()
     r.energy_threshold = 200
     r.pause_threshold = 1.0
@@ -152,14 +154,14 @@ def listen() -> str | None:
             audio = r.listen(source, timeout=5, phrase_time_limit=15)
         text = r.recognize_google(audio)
         print(f"You said: {text}")
-        return text
+        return text, audio
     except sr.WaitTimeoutError:
-        return None
+        return None, None
     except sr.UnknownValueError:
-        return None
+        return None, None
     except Exception as e:
         print(f"(mic error: {e})")
-        return None
+        return None, None
 
 
 # ── LLM ────────────────────────────────────────────────────────────────────────
@@ -256,7 +258,7 @@ def main():
     while True:
         try:
             set_face("listening")
-            user_input = listen()
+            user_input, audio_data = listen()
         except KeyboardInterrupt:
             print("\nGoodbye.")
             set_face("idle")
@@ -272,13 +274,31 @@ def main():
             speak("Talk later.", voice)
             break
 
-        # Fire identify in background — runs while we prep the prompt
+        # Fire camera identify in background while we do voice ID instantly
         id_thread = start_identify()
 
+        # Voice ID — instant, no network call
+        voice_person = "unknown"
+        if audio_data:
+            voice_person = identify_voice(audio_data)
+            if voice_person != "unknown":
+                print(f"[voice_id] Speaker: {voice_person}", flush=True)
+
         set_face("thinking")
-        person = collect_identify(id_thread)
-        if person:
-            print(f"[identify] Recognized: {person}")
+
+        # Camera ID — wait for result
+        camera_person = collect_identify(id_thread)
+
+        # Camera wins if it got someone, otherwise fall back to voice
+        if camera_person:
+            person = camera_person
+            print(f"[identify] Camera: {person}", flush=True)
+        elif voice_person != "unknown":
+            person = voice_person
+            print(f"[identify] Voice fallback: {person}", flush=True)
+        else:
+            person = ""
+
         response = handle_turn(user_input, conversations, project_memory=project_memory, lived_memory=lived_memory, person=person)
         append_lived_memory(user_input, response, person=person)
         print(f"Echo: {response}\n")
