@@ -212,7 +212,7 @@ def get_awareness_config():
 
 @app.route("/api/awareness/config", methods=["POST"])
 def save_awareness_config():
-    data = request.json or {}
+    data = request.get_json(force=True, silent=True) or {}
     with open(AWARENESS_FILE, "w") as f:
         json.dump(data, f, indent=2)
     return jsonify({"status": "saved"})

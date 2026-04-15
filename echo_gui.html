@@ -960,7 +960,7 @@ async function saveAwareness() {
   try {
     await fetch("http://localhost:5050/api/awareness/config", {
       method: "POST",
-      headers: {"Content-Type":"application/json"},
+      headers: {"Content-Type":"text/plain"},
       body: JSON.stringify(cfg),
     });
     document.getElementById("awareness-modal").remove();
