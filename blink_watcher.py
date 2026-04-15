@@ -242,6 +242,7 @@ async def watch(blink: Blink):
     await blink.refresh()
     last_thumbnails = {name: cam.thumbnail for name, cam in blink.cameras.items()}
     last_announced  = {}
+    last_desk_greet = 0   # cooldown for desk camera — snap changes thumbnail, avoid loop
 
     cam_list = list(blink.cameras.keys())
     print(f"Watching {len(cam_list)} cameras: {cam_list}", flush=True)
@@ -260,7 +261,11 @@ async def watch(blink: Blink):
             print(f"[{name}] Motion detected", flush=True)
 
             if name == DESK_CAMERA:
-                # Face recognition — run in thread so it doesn't block other cameras
+                # Cooldown — snap updates thumbnail, would loop without this
+                if time.time() - last_desk_greet < 120:
+                    print(f"[Echo camera] Skipped — cooldown active", flush=True)
+                    continue
+                last_desk_greet = time.time()
                 threading.Thread(target=handle_desk_motion, daemon=True).start()
                 continue
 
