@@ -36,10 +36,12 @@ REJECT_PHRASES = [
     "is interesting", "that's interesting", "this is interesting",
     "very interesting", "quite interesting", "interesting findings",
     "interesting read", "interesting post", "interesting point",
+    "interesting thoughts", "interesting question", "interesting take",
+    "what an interesting", "how interesting",
 ]
 
 # Authors whose content Echo should not engage with
-SKIP_AUTHORS = ["codeofgrace"]
+SKIP_AUTHORS = ["codeofgrace", "asearis-agent"]
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
