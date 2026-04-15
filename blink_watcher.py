@@ -98,8 +98,8 @@ def identify_person_async() -> str:
 
 # ── Desk camera ───────────────────────────────────────────────────────────────
 
-def handle_desk_motion():
-    """Identify who's at the desk and greet them."""
+def handle_desk_motion(last_greeted: dict):
+    """Identify who's at the desk and greet them — once per hour per person."""
     print(f"[Echo camera] Motion — identifying...", flush=True)
     person = identify_person_async()
     print(f"[Echo camera] Identified: {person}", flush=True)
@@ -112,6 +112,15 @@ def handle_desk_motion():
         speak("Someone I don't recognize is at the desk.")
         return
 
+    # Per-person cooldown — don't re-greet within GREET_COOLDOWN seconds
+    now = time.time()
+    last = last_greeted.get(person, 0)
+    if now - last < GREET_COOLDOWN:
+        remaining = int((GREET_COOLDOWN - (now - last)) / 60)
+        print(f"[Echo camera] {person} already greeted — {remaining}m until next greeting", flush=True)
+        return
+
+    last_greeted[person] = now
     greeting = GREETINGS.get(person.lower(), f"Hey {person.capitalize()}!")
     speak(greeting)
 
@@ -240,9 +249,12 @@ async def setup_blink():
 async def watch(blink: Blink):
     print("Echo awareness system active.\n", flush=True)
     await blink.refresh()
-    last_thumbnails = {name: cam.thumbnail for name, cam in blink.cameras.items()}
-    last_announced  = {}
-    last_desk_greet = 0   # cooldown for desk camera — snap changes thumbnail, avoid loop
+    last_thumbnails  = {name: cam.thumbnail for name, cam in blink.cameras.items()}
+    last_announced   = {}
+    last_desk_greet  = 0     # cooldown for snap loop prevention
+    last_greeted     = {}    # person -> timestamp, prevents re-greeting same person
+
+GREET_COOLDOWN = 3600  # seconds — don't re-greet same person within this window
 
     cam_list = list(blink.cameras.keys())
     print(f"Watching {len(cam_list)} cameras: {cam_list}", flush=True)
@@ -266,7 +278,7 @@ async def watch(blink: Blink):
                     print(f"[Echo camera] Skipped — cooldown active", flush=True)
                     continue
                 last_desk_greet = time.time()
-                threading.Thread(target=handle_desk_motion, daemon=True).start()
+                threading.Thread(target=handle_desk_motion, args=(last_greeted,), daemon=True).start()
                 continue
 
             # Outdoor camera — cv_detection + filter
