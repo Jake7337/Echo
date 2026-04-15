@@ -1,5 +1,5 @@
 {
-  "quiet_hours": { "start": 23, "end": 7 },
+  "quiet_hours": { "start": 23, "end": 7, "enabled": false },
   "after_dark":  { "start": 21, "end": 6  },
   "camera_cooldown_seconds": 300,
   "camera_cooldown_overrides": { "Main door": 120 },

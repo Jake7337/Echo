@@ -69,6 +69,8 @@ def _in_range(hour: int, start: int, end: int) -> bool:
 
 def is_quiet_hours(cfg: dict) -> bool:
     qh = cfg.get("quiet_hours", {})
+    if not qh.get("enabled", True):
+        return False
     return _in_range(datetime.now().hour, qh.get("start", 23), qh.get("end", 7))
 
 def is_after_dark(cfg: dict) -> bool:
