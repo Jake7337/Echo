@@ -1,34 +1,200 @@
 """
 blink_watcher.py
-Watches Blink cameras for motion and has Echo announce it out loud.
-Run this alongside echo_voice.py or on its own.
+Echo's home awareness system.
+
+Desk camera ("Echo"):
+  Motion → identify face → speak greeting
+  Unknown face → "Someone I don't recognize is at the desk"
+
+Outdoor cameras:
+  Smart filtering — cooldown, quiet hours, after-dark, object type, face recognition
 """
 
 import json
 import os
 import time
 import asyncio
+import threading
 import requests
 from datetime import datetime
 from blinkpy.blinkpy import Blink
 from blinkpy.auth import Auth
 
-CREDS_FILE   = os.path.join(os.path.dirname(__file__), "blink_creds.json")
-POLL_SECONDS = 30
-PI_SPEAK_URL = "http://192.168.68.84:5100/speak"
+BASE_DIR       = os.path.dirname(os.path.abspath(__file__))
+CREDS_FILE     = os.path.join(BASE_DIR, "blink_creds.json")
+SESSION_FILE   = os.path.join(BASE_DIR, "blink_session.json")
+CONFIG_FILE    = os.path.join(BASE_DIR, "awareness_config.json")
+PI_SPEAK_URL   = "http://192.168.68.84:5100/speak"
+IDENTIFY_URL   = "http://localhost:5050/api/identify"
+POLL_SECONDS   = 30
+DESK_CAMERA    = "Echo"
 
-# ── Voice — routed to Pi speakers ─────────────────────────────────────────────
+# Greetings per known person — add names here as you enroll faces
+GREETINGS = {
+    "jake":    "Hey Jake — I see you.",
+    "rachael": "Hey Rachael, what's up?",
+    "judy":    "Hi Judy!",
+    "brent":   "Hey Brent, good to see you.",
+}
+
+# ── Config ────────────────────────────────────────────────────────────────────
+
+def load_config() -> dict:
+    defaults = {
+        "quiet_hours": {"start": 23, "end": 7},
+        "after_dark":  {"start": 21, "end": 6},
+        "camera_cooldown_seconds": 300,
+        "camera_enabled": {},
+        "front_door_cameras": [],
+        "vip_faces": [],
+        "skip_objects": ["cat", "dog", "bird", "squirrel", "insect"],
+    }
+    try:
+        with open(CONFIG_FILE) as f:
+            cfg = json.load(f)
+        defaults.update(cfg)
+    except Exception:
+        pass
+    return defaults
+
+def _in_range(hour: int, start: int, end: int) -> bool:
+    """True if hour is within [start, end) range, wrapping midnight."""
+    if start >= end:  # wraps midnight (e.g. 23–7)
+        return hour >= start or hour < end
+    return start <= hour < end
+
+def is_quiet_hours(cfg: dict) -> bool:
+    qh = cfg.get("quiet_hours", {})
+    return _in_range(datetime.now().hour, qh.get("start", 23), qh.get("end", 7))
+
+def is_after_dark(cfg: dict) -> bool:
+    ad = cfg.get("after_dark", {})
+    return _in_range(datetime.now().hour, ad.get("start", 21), ad.get("end", 6))
+
+# ── Voice ─────────────────────────────────────────────────────────────────────
 
 def speak(text: str):
     print(f"Echo: {text}", flush=True)
     try:
         requests.post(PI_SPEAK_URL, json={"text": text}, timeout=10)
     except Exception as e:
-        print(f"[blink] speak failed — Pi unreachable? {e}", flush=True)
+        print(f"[blink] speak failed: {e}", flush=True)
 
-# ── Blink ──────────────────────────────────────────────────────────────────────
+# ── Face identification ───────────────────────────────────────────────────────
 
-BLINK_SESSION_FILE = os.path.join(os.path.dirname(__file__), "blink_session.json")
+def identify_person_async() -> str:
+    """Call identify endpoint in a thread, return name or 'unknown'."""
+    result = ["unknown"]
+    def _run():
+        try:
+            r = requests.post(IDENTIFY_URL, timeout=15)
+            result[0] = r.json().get("person", "unknown")
+        except Exception as e:
+            print(f"[identify] {e}", flush=True)
+    t = threading.Thread(target=_run, daemon=True)
+    t.start()
+    t.join(timeout=15)
+    return result[0]
+
+# ── Desk camera ───────────────────────────────────────────────────────────────
+
+def handle_desk_motion():
+    """Identify who's at the desk and greet them."""
+    print(f"[Echo camera] Motion — identifying...", flush=True)
+    person = identify_person_async()
+    print(f"[Echo camera] Identified: {person}", flush=True)
+
+    if person in ("timeout", "error", "no_face", "unknown"):
+        speak("Someone's at the desk.")
+        return
+
+    if person == "someone":
+        speak("Someone I don't recognize is at the desk.")
+        return
+
+    greeting = GREETINGS.get(person.lower(), f"Hey {person.capitalize()}!")
+    speak(greeting)
+
+# ── Outdoor cameras ───────────────────────────────────────────────────────────
+
+def should_announce(camera_name: str, cv: list, last_announced: dict, cfg: dict) -> tuple[bool, str]:
+    """
+    Returns (should_announce, reason_or_text).
+    Applies all filtering rules and returns announcement text or skip reason.
+    """
+    now       = time.time()
+    cooldown  = cfg.get("camera_cooldown_seconds", 300)
+    after_dark = is_after_dark(cfg)
+    quiet     = is_quiet_hours(cfg)
+    front_door_cams = [c.lower() for c in cfg.get("front_door_cameras", [])]
+    is_front  = camera_name.lower() in front_door_cams
+    skip_objects = [o.lower() for o in cfg.get("skip_objects", [])]
+
+    # Camera disabled
+    cam_enabled = cfg.get("camera_enabled", {})
+    if cam_enabled.get(camera_name, True) is False:
+        return False, "camera disabled"
+
+    # Cooldown
+    if last_announced.get(camera_name, 0) + cooldown > now:
+        elapsed = int(now - last_announced.get(camera_name, 0))
+        return False, f"cooldown ({elapsed}s / {cooldown}s)"
+
+    objects = [o.lower() for o in cv] if cv else []
+    has_person  = any("person" in o for o in objects)
+    has_vehicle = any(o in ("vehicle", "car", "truck") for o in objects)
+    has_animal  = any(o in skip_objects for o in objects)
+
+    # Quiet hours — only announce persons
+    if quiet and not has_person:
+        return False, "quiet hours — no person"
+
+    # Person detected
+    if has_person:
+        if is_front:
+            return True, f"Someone I don't recognize is at the {camera_name}."
+        if after_dark:
+            return True, f"Person detected on {camera_name}."
+        return True, f"Motion on {camera_name} — someone's out there."
+
+    # Vehicle
+    if has_vehicle:
+        if after_dark or is_front:
+            return True, f"A vehicle just pulled up on {camera_name}."
+        return False, "vehicle — daytime non-front skip"
+
+    # Known skip objects (animals etc.)
+    if has_animal:
+        if after_dark:
+            return True, f"Motion on {camera_name}."
+        return False, f"animal — skip"
+
+    # General motion — after dark only
+    if after_dark:
+        return True, f"Motion on {camera_name}."
+
+    return False, "routine daytime motion — skip"
+
+# ── cv_detection lookup ───────────────────────────────────────────────────────
+
+async def get_cv_detection(blink, camera_name: str) -> list:
+    from blinkpy import api as blink_api
+    try:
+        data = await blink_api.request_videos(blink, time=time.time() - 120, page=0)
+        if not isinstance(data, dict):
+            return []
+        for item in data.get("media", []):
+            if item.get("device_name") == camera_name:
+                try:
+                    meta = json.loads(item.get("metadata") or "{}")
+                    return meta.get("cv_detection", [])
+                except Exception:
+                    return []
+    except Exception:
+        pass
+    return []
+
+# ── Blink setup ───────────────────────────────────────────────────────────────
 
 async def setup_blink():
     with open(CREDS_FILE) as f:
@@ -36,9 +202,9 @@ async def setup_blink():
 
     blink = Blink(motion_interval=POLL_SECONDS)
 
-    if os.path.exists(BLINK_SESSION_FILE):
+    if os.path.exists(SESSION_FILE):
         print("Loading saved session...", flush=True)
-        with open(BLINK_SESSION_FILE) as f:
+        with open(SESSION_FILE) as f:
             saved = json.load(f)
         auth = Auth(saved, no_prompt=True)
     else:
@@ -57,14 +223,11 @@ async def setup_blink():
         await blink.get_homescreen()
         await blink.setup_post_verify()
 
-    import time
     blink.last_refresh = int(time.time())
 
     if blink.urls:
-        await blink.save(BLINK_SESSION_FILE)
-        print("Session saved.", flush=True)
+        await blink.save(SESSION_FILE)
 
-    # Arm all sync modules so motion detection works
     for name, sync in blink.sync.items():
         if not sync.arm:
             print(f"Arming {name}...", flush=True)
@@ -72,66 +235,50 @@ async def setup_blink():
 
     return blink
 
-def build_announcement(camera_name: str, cv_detection: list) -> str:
-    """Turn camera name + cv_detection list into a natural announcement."""
-    if not cv_detection:
-        return f"Motion detected on {camera_name}."
-    objects = cv_detection
-    if len(objects) == 1:
-        label = objects[0]
-    else:
-        label = ", ".join(objects[:-1]) + " and " + objects[-1]
-    return f"{label.capitalize()} detected on {camera_name}."
-
-
-async def get_cv_detection(blink, camera_name: str) -> list:
-    """
-    Fetch the most recent media event for this camera and return cv_detection.
-    Called only when a thumbnail change is detected — not on every poll.
-    """
-    from blinkpy import api as blink_api
-    try:
-        data = await blink_api.request_videos(blink, time=time.time() - 120, page=0)
-        if not isinstance(data, dict):
-            return []
-        for item in data.get("media", []):
-            if item.get("device_name") == camera_name:
-                metadata_raw = item.get("metadata") or "{}"
-                try:
-                    metadata = json.loads(metadata_raw)
-                    return metadata.get("cv_detection", [])
-                except Exception:
-                    return []
-    except Exception:
-        pass
-    return []
-
+# ── Main watch loop ───────────────────────────────────────────────────────────
 
 async def watch(blink: Blink):
-    print("Echo is watching the cameras...\n")
-
-    # Seed thumbnails — only announce changes from this point forward
+    print("Echo awareness system active.\n", flush=True)
     await blink.refresh()
     last_thumbnails = {name: cam.thumbnail for name, cam in blink.cameras.items()}
-    print(f"Watching {len(last_thumbnails)} cameras...", flush=True)
+    last_announced  = {}
+
+    cam_list = list(blink.cameras.keys())
+    print(f"Watching {len(cam_list)} cameras: {cam_list}", flush=True)
 
     while True:
         await asyncio.sleep(POLL_SECONDS)
         await blink.refresh()
+        cfg = load_config()
 
         for name, camera in blink.cameras.items():
             new_thumb = camera.thumbnail
-            if new_thumb and new_thumb != last_thumbnails.get(name):
-                last_thumbnails[name] = new_thumb
-                cv = await get_cv_detection(blink, name)
-                announcement = build_announcement(name, cv)
-                print(f"Motion on {name}: {cv}", flush=True)
-                speak(announcement)
+            if not new_thumb or new_thumb == last_thumbnails.get(name):
+                continue
 
-# ── Main ───────────────────────────────────────────────────────────────────────
+            last_thumbnails[name] = new_thumb
+            print(f"[{name}] Motion detected", flush=True)
+
+            if name == DESK_CAMERA:
+                # Face recognition — run in thread so it doesn't block other cameras
+                threading.Thread(target=handle_desk_motion, daemon=True).start()
+                continue
+
+            # Outdoor camera — cv_detection + filter
+            cv = await get_cv_detection(blink, name)
+            announce, text = should_announce(name, cv, last_announced, cfg)
+
+            if announce:
+                last_announced[name] = time.time()
+                speak(text)
+                print(f"[{name}] → {text}", flush=True)
+            else:
+                print(f"[{name}] → skipped ({text})", flush=True)
+
+# ── Main ──────────────────────────────────────────────────────────────────────
 
 async def main():
-    print("Connecting to Blink...")
+    print("Connecting to Blink...", flush=True)
     blink = await setup_blink()
     await watch(blink)
 

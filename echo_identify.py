@@ -49,17 +49,28 @@ def _load_known_faces():
     if not os.path.exists(KNOWN_FACES_DIR):
         return
 
-    cascade   = _get_cascade()
-    faces     = []
-    labels    = []
-    label_idx = 0
+    import re
+    cascade       = _get_cascade()
+    faces         = []
+    labels        = []
+    name_to_label = {}   # name -> int label
+    label_idx     = 0
 
     for fname in sorted(os.listdir(KNOWN_FACES_DIR)):
         if not fname.lower().endswith((".jpg", ".jpeg", ".png")):
             continue
         if fname == "last_snap.jpg":
             continue  # debug snapshot, not a reference face
-        name = os.path.splitext(fname)[0]
+        # Strip trailing _N suffix — jake_1.jpg, jake_2.jpg all map to "jake"
+        base = os.path.splitext(fname)[0]
+        name = re.sub(r"_\d+$", "", base)
+
+        # Assign or reuse label for this name
+        if name not in name_to_label:
+            name_to_label[name] = label_idx
+            _label_map[label_idx] = name
+            label_idx += 1
+
         path = os.path.join(KNOWN_FACES_DIR, fname)
         img  = cv2.imread(path)
         if img is None:
@@ -74,10 +85,8 @@ def _load_known_faces():
         face_roi = gray[y:y+h, x:x+w]
         face_roi = cv2.resize(face_roi, (200, 200))
         faces.append(face_roi)
-        labels.append(label_idx)
-        _label_map[label_idx] = name
-        label_idx += 1
-        print(f"[identify] Enrolled: {name}")
+        labels.append(name_to_label[name])
+        print(f"[identify] Enrolled: {fname} → {name}")
 
     if faces:
         _recognizer = cv2.face.LBPHFaceRecognizer_create()

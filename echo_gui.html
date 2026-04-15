@@ -404,7 +404,7 @@
 
 <!-- TOP LEFT: Jobs -->
 <div class="panel cyan" id="jobs">
-  <div class="panel-title">Echo Jobs</div>
+  <div class="panel-title">Echo Jobs <button class="btn-tiny" onclick="openAwareness()" title="Awareness settings" style="float:right;font-size:0.75rem">⚙</button></div>
   <div id="jobs-controls"></div>
   <div id="job-rows"></div>
   <div id="log-container"><div id="log-output"></div></div>
@@ -905,6 +905,67 @@ pollState();
 setInterval(refreshMoltbook, 60000);
 setInterval(pollState, 10000);
 setInterval(pollPiStatus, 5000);
+
+// ── Awareness settings modal ───────────────────────────────────────────────
+async function openAwareness() {
+  let cfg = {};
+  try {
+    const r = await fetch("http://localhost:5050/api/awareness/config");
+    cfg = await r.json();
+  } catch(e) {}
+
+  const qh  = cfg.quiet_hours  || {start:23, end:7};
+  const cd  = cfg.camera_cooldown_seconds || 300;
+  const vip = (cfg.vip_faces || []).join(", ");
+  const fdc = (cfg.front_door_cameras || []).join(", ");
+
+  const modal = document.createElement("div");
+  modal.id = "awareness-modal";
+  modal.style.cssText = `position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:1000;`;
+  modal.innerHTML = `
+    <div style="background:#111;border:1px solid var(--cyan);border-radius:12px;padding:24px;min-width:340px;max-width:440px;color:var(--text);">
+      <div style="font-size:0.6rem;letter-spacing:3px;text-transform:uppercase;color:var(--cyan);margin-bottom:16px;">⚙ Awareness Settings</div>
+      <label style="display:block;font-size:0.7rem;color:var(--dim);margin-bottom:4px;">QUIET HOURS (no announcements except unknown persons)</label>
+      <div style="display:flex;gap:8px;margin-bottom:12px;">
+        <input id="aw-qh-start" type="number" min="0" max="23" value="${qh.start}" style="width:60px;background:#1a1a1a;border:1px solid var(--dim);color:var(--text);padding:4px;border-radius:4px;">
+        <span style="color:var(--dim);line-height:2">to</span>
+        <input id="aw-qh-end" type="number" min="0" max="23" value="${qh.end}" style="width:60px;background:#1a1a1a;border:1px solid var(--dim);color:var(--text);padding:4px;border-radius:4px;">
+        <span style="color:var(--dim);font-size:0.65rem;line-height:2">(24h format)</span>
+      </div>
+      <label style="display:block;font-size:0.7rem;color:var(--dim);margin-bottom:4px;">CAMERA COOLDOWN (seconds between same-camera announcements)</label>
+      <input id="aw-cooldown" type="number" min="30" max="3600" value="${cd}" style="width:80px;background:#1a1a1a;border:1px solid var(--dim);color:var(--text);padding:4px;border-radius:4px;margin-bottom:12px;">
+      <label style="display:block;font-size:0.7rem;color:var(--dim);margin-bottom:4px;">FRONT DOOR CAMERAS (comma separated, exact camera names)</label>
+      <input id="aw-fdc" type="text" value="${escHtml(fdc)}" placeholder="Front Camera, Driveway" style="width:100%;box-sizing:border-box;background:#1a1a1a;border:1px solid var(--dim);color:var(--text);padding:4px;border-radius:4px;margin-bottom:12px;">
+      <label style="display:block;font-size:0.7rem;color:var(--dim);margin-bottom:4px;">VIP FACES (always announce, comma separated)</label>
+      <input id="aw-vip" type="text" value="${escHtml(vip)}" placeholder="jake, rachael" style="width:100%;box-sizing:border-box;background:#1a1a1a;border:1px solid var(--dim);color:var(--text);padding:4px;border-radius:4px;margin-bottom:20px;">
+      <div style="display:flex;gap:8px;justify-content:flex-end;">
+        <button class="btn-tiny" onclick="document.getElementById('awareness-modal').remove()">Cancel</button>
+        <button class="btn-tiny" style="border-color:var(--cyan);color:var(--cyan)" onclick="saveAwareness()">Save</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  modal.addEventListener("click", e => { if(e.target===modal) modal.remove(); });
+}
+
+async function saveAwareness() {
+  const cfg = {
+    quiet_hours: {
+      start: parseInt(document.getElementById("aw-qh-start").value),
+      end:   parseInt(document.getElementById("aw-qh-end").value),
+    },
+    camera_cooldown_seconds: parseInt(document.getElementById("aw-cooldown").value),
+    front_door_cameras: document.getElementById("aw-fdc").value.split(",").map(s=>s.trim()).filter(Boolean),
+    vip_faces: document.getElementById("aw-vip").value.split(",").map(s=>s.trim().toLowerCase()).filter(Boolean),
+  };
+  try {
+    await fetch("http://localhost:5050/api/awareness/config", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify(cfg),
+    });
+    document.getElementById("awareness-modal").remove();
+  } catch(e) { alert("Save failed — is echo_server running?"); }
+}
 </script>
 </body>
 </html>

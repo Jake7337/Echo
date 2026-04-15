@@ -19,8 +19,9 @@ from flask import Flask, jsonify, request
 from flask_socketio import SocketIO
 from flask_cors import CORS
 
-BASE_DIR      = os.path.dirname(os.path.abspath(__file__))
-CREDS_FILE    = os.path.join(BASE_DIR, "moltbook_creds.json")
+BASE_DIR        = os.path.dirname(os.path.abspath(__file__))
+CREDS_FILE      = os.path.join(BASE_DIR, "moltbook_creds.json")
+AWARENESS_FILE  = os.path.join(BASE_DIR, "awareness_config.json")
 IDENTITY_FILE = os.path.join(BASE_DIR, "identity.md")
 ECHO_MEM_DIR  = os.path.join(BASE_DIR, "memory")
 EMOTION_FILE  = os.path.join(ECHO_MEM_DIR, "emotional_state.json")
@@ -197,6 +198,24 @@ def api_chat():
         pass
 
     return jsonify({"reply": reply})
+
+
+# ── Awareness config routes ────────────────────────────────────────────────
+
+@app.route("/api/awareness/config", methods=["GET"])
+def get_awareness_config():
+    try:
+        with open(AWARENESS_FILE) as f:
+            return jsonify(json.load(f))
+    except Exception:
+        return jsonify({})
+
+@app.route("/api/awareness/config", methods=["POST"])
+def save_awareness_config():
+    data = request.json or {}
+    with open(AWARENESS_FILE, "w") as f:
+        json.dump(data, f, indent=2)
+    return jsonify({"status": "saved"})
 
 
 # ── Identify route ─────────────────────────────────────────────────────────
