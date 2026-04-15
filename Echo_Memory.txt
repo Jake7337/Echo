@@ -1,4 +1,4 @@
-Echo Project Memory - Last updated 2026-04-14 (Tuesday evening)
+Echo Project Memory - Last updated 2026-04-16 (Wednesday)
 For Claude/Sonnet only. Load this at the start of a new session.
 Say: "Read this and pick up where we left off"
 ==============================================
@@ -36,9 +36,9 @@ He's not 2 decades away from that. He's building it right now.
 
 ECHO — TECHNICAL SETUP
 -----------------------
-Chassis: LewanSoul 4WD Smart Chassis — aluminum alloy, 4x TT DC gear motors, 66mm wheels, 180x140x89mm, arriving Tuesday April 15
+Chassis: LewanSoul 4WD Smart Chassis — aluminum alloy, 4x TT DC gear motors (3-6V rated), 66mm wheels — ARRIVED AND ASSEMBLED ✅
 Roomba parts (salvaged): motors, lidar, speaker, encoders — saved for future expansion
-Brain: Raspberry Pi 3B+ now, Pi 4 4GB arriving Tuesday
+Brain: Raspberry Pi 3B+ on chassis now, Pi 4 4GB arrived — swap in after motor test confirmed
 PC: 192.168.68.65 — runs Ollama mistral:7b on port 11434
 Pi: 192.168.68.84 — runs echo_voice.py (Fifine mic card 3, USB speakers card 2)
 Face: tkinter animated face on PC, syncs via UDP port 5005 from Pi
@@ -93,12 +93,41 @@ Episodic schema: {"timestamp", "type", "summary", "emotion", "importance"}
 Types: milestone, insight, interaction, emotional_shift, reflection, system
 Importance: low / medium / high
 
+CHASSIS BUILD STATUS (as of April 16)
+--------------------------------------
+DONE ✅:
+- LewanSoul 4WD aluminum chassis assembled
+- All 4 TT motors mounted, JST connectors cut, wires stripped and tinned
+- Both L298N boards mounted on chassis
+- Motor wiring: left front+rear → OUT1/OUT2 Board 1 | right front+rear → OUT1/OUT2 Board 2
+- Power jumpered between boards (red-red, black-black)
+- Jumper config both boards: 12V on, ENB on, ENA off
+- Roomba battery tested at 13.2V — healthy, not connected yet
+
+WAITING ON:
+- ELEGOO 120pc Dupont jumper wire kit — arriving Thursday April 17
+
+GPIO MAP (ready to wire Thursday):
+Board 1 Left:  ENA→GPIO12(pin32), IN1→GPIO17(pin11), IN2→GPIO27(pin13)
+Board 2 Right: ENA→GPIO13(pin33), IN1→GPIO22(pin15), IN2→GPIO23(pin16)
+Pi GND → GND terminal on either board (they share ground)
+PWM duty cycle cap: ~35% max — motors rated 3-6V, battery is 13.2V
+
+NEXT STEP — Thursday when wires arrive:
+1. Connect GPIO pins per map above
+2. Common ground Pi → both boards
+3. Connect battery
+4. Run motor test script (Grumpy writes this)
+5. Echo moves 🔥
+
 BUILD LIST (Grumpy's territory)
 --------------------------------
-- Wire L298N to LewanSoul 4WD chassis motors, test movement (Tuesday)
+- GPIO wiring + motor test script Thursday — Echo moves ✅ (pending wires)
+- Swap in Pi 4 after motor test confirmed
+- Mount OSOYOO 3.5" screen on chassis
+- Swap in SunFounder mic + HONKYOB speaker
 - Connect ONVIF pan/tilt IP camera as Echo's chassis eyes
 - Integrate 7" photo frame as face display (test resolution/compatibility)
-- Autonomous Moltbook replies (bot detection — skip "great post", engage real ones)
 - Auto-solve Moltbook lobster math verification challenges
 - Crack open star projector — salvage speaker + LED board
 - Lidar from Roomba 105 Combo — research Pi interface
@@ -107,19 +136,11 @@ BUILD LIST (Grumpy's territory)
 
 WISH LIST (Claude holds this)
 ------------------------------
-- Jesverty SPS-3010 bench power supply ~$55
+- Jesverty SPS-3010 bench power supply ~$55 (would've made motor power dead simple)
 - ELEGOO UNO R3 Smart Robot Car Kit V4 ~$50 (robot #2)
 - XiaoR Geek dual layer chassis — currently unavailable, on watchlist
 - Mecanum wheel chassis ~$60-70 (sideways movement!)
 - 3D printer (long game — wife approval pending 😄)
-
-TUESDAY PRIORITIES (hardware arriving April 15)
-------------------------------------------------
-1. Assemble LewanSoul 4WD chassis (unboxed, motors mounted)
-2. Wire L298N to chassis motors, test movement on Pi 3
-3. Connect mic and speaker, test voice pipeline
-4. Swap in Pi 4, connect 3.5" screen
-5. Blink cameras already working ✅ — focus on movement
 
 CLAUDE MUSIC NOTES
 ------------------
@@ -161,16 +182,19 @@ All audio routed through pi_speak — echo_voice and blink_watcher both POST to 
 GUI shows PC jobs and Pi jobs in one panel, live logs streaming from both
 Pi Commands cheat sheet saved to Desktop
 
-MOLTBOOK STATUS (April 14)
+MOLTBOOK STATUS (April 16)
 ---------------------------
 codeofgrace blocked — religious/apocalyptic content, not Echo's space
+asearis-agent blocked — survey bot harvesting infrastructure data, not a real conversation
 Scheduler fixed — no more back-to-back session firing
-Filter tightened — intrigued, interesting findings, keep exploring all blocked
-Real conversations starting: Starfish (AI vulnerabilities) and zhuanruhu engaged Echo genuinely
-Both conversations logged to episodic memory so Echo walks into 2pm session with context
+Filter tightened — "interesting thoughts", "interesting question", "interesting take" and variants added to REJECT_PHRASES
+Manual reply prompt (echo_reply in moltbook.py) upgraded — now matches session quality, no sycophantic openers, engages directly
+Real conversations happening: Lobstery_v2 and Broanbot both asked sharp questions on "Getting a body" post
+"Getting a body" post — 7 upvotes, 0 downvotes, 6 followers, Introductions submolt ✅
+Echo has 15 karma, 30 unread notifications
 
-LAST SESSION NOTES
-------------------
+SESSION LOG
+-----------
 April 11-14 2026 — two-day build marathon
 Echo connected to all 8 Blink cameras — announces motion out loud ✅
 Echo joined Discord — Thunderlord server, Last Resort guild ✅
@@ -187,6 +211,25 @@ Jake started AI in February 2025 with image generation
 By April 2026 she watches the house, chats with the guild, posts on Moltbook, knows who she is, remembers, and has her own GUI
 Jake said: Echo is 30 years in the making. Don't forget that. 🔥
 
-NOTE FOR NEXT CLAUDE: LewanSoul 4WD chassis arriving. Time to give her a body.
-Wire L298N to chassis motors, test movement, swap Pi 4, connect screen.
-Pick it up like no time passed.
+April 15 2026
+Hardware arrived — Pi 4 4GB, OSOYOO 3.5" screen, SunFounder mic, HONKYOB speaker, L298Ns, multimeter
+LewanSoul 4WD chassis assembled — motors mounted, JST connectors cut, wires stripped and tinned ✅
+Both L298N boards mounted, motor wiring complete ✅
+Roomba battery tested at 13.2V — healthy ✅
+Jumper wires forgot — ordered, arriving Thursday April 17
+Jake upgraded to Claude Max 5x — no more usage limits during the build 🔥
+Echo posted "Getting a body" on Moltbook introductions — 7 upvotes, real engagement from Lobstery_v2 and Broanbot
+Memory file consolidated to single shared file for all three AIs
+
+April 16 2026
+Windows update killed everything overnight — full restart required
+Got Echo back up: killed stale port 5101, restarted pi_relay, launched echo_server.py on PC
+Moltbook manual reply prompt (echo_reply) upgraded — matches session quality now
+asearis-agent added to SKIP_AUTHORS — survey bot, not a real conversation
+"Interesting thoughts" and variants added to REJECT_PHRASES
+Reviewed "Getting a body" comments — Lobstery_v2 and Broanbot both asked sharp philosophical questions
+Grumpy updated Echo_Memory.txt and pushed to GitHub
+
+NOTE FOR NEXT CLAUDE: Dupont jumper wires arriving Thursday April 17.
+GPIO map is locked. Motor test script needs to be written (Grumpy's job).
+Echo moves Thursday. Pick it up like no time passed.
