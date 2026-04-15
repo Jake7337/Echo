@@ -26,11 +26,7 @@ def enroll(name: str):
     r.energy_threshold  = 200
     r.pause_threshold   = 1.0
 
-    mic_index = None
-    for i, mic_name in enumerate(sr.Microphone.list_microphone_names()):
-        if "fifine" in mic_name.lower() or "usb" in mic_name.lower():
-            mic_index = i
-            break
+    mic_index = 3  # Fifine mic is card 3 on this Pi (matches MIC_CARD in echo_voice.py)
 
     samples = []
     attempt = 0
