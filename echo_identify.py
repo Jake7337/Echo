@@ -129,7 +129,14 @@ async def _snap_blink() -> bytes | None:
         print(f"[identify] Camera '{CAMERA_NAME}' not found. Available: {list(blink.cameras.keys())}")
         return None
 
-    # Refresh to get current camera state — no snap needed, just grab what's visible now
+    # Snap a fresh picture then wait for it to process
+    try:
+        await cam.snap_picture()
+        print("[identify] Snap triggered — waiting...", flush=True)
+        await asyncio.sleep(4)
+    except Exception as e:
+        print(f"[identify] Snap warning: {e}")
+
     try:
         await blink.refresh()
     except Exception as e:
@@ -204,7 +211,7 @@ def _recognize(img_bytes: bytes) -> str:
 
 # ── Public interface ──────────────────────────────────────────────────────────
 
-def identify_person(timeout: int = 25) -> str:
+def identify_person(timeout: int = 30) -> str:
     """
     Snap Echo camera and return who's in frame.
     Returns: name string, 'unknown', 'no_face', 'timeout', or 'error'
@@ -213,7 +220,7 @@ def identify_person(timeout: int = 25) -> str:
     try:
         loop = asyncio.new_event_loop()
         img_bytes = loop.run_until_complete(
-            asyncio.wait_for(_snap_blink(), timeout=timeout - 3)
+            asyncio.wait_for(_snap_blink(), timeout=timeout - 4)
         )
         loop.close()
     except asyncio.TimeoutError:

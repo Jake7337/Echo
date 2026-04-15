@@ -93,7 +93,7 @@ def identify_person_async() -> str:
             print(f"[identify] {e}", flush=True)
     t = threading.Thread(target=_run, daemon=True)
     t.start()
-    t.join(timeout=15)
+    t.join(timeout=35)
     return result[0]
 
 # ── Desk camera ───────────────────────────────────────────────────────────────
