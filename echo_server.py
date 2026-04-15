@@ -252,22 +252,20 @@ def api_moltbook_stats():
             creds = json.load(f)
         headers = {"Authorization": f"Bearer {creds['api_key']}"}
 
-        profile_resp = requests.get(f"{MOLTBOOK_URL}/me",            headers=headers, timeout=10)
-        notif_resp   = requests.get(f"{MOLTBOOK_URL}/notifications",  headers=headers, timeout=10)
-
-        profile = profile_resp.json() if profile_resp.ok else {}
-        notifs  = notif_resp.json()   if notif_resp.ok  else []
-        if isinstance(notifs, dict):
-            notifs = notifs.get("notifications", [])
+        home_resp = requests.get(f"{MOLTBOOK_URL}/home", headers=headers, timeout=10)
+        home      = home_resp.json() if home_resp.ok else {}
+        account   = home.get("your_account", {})
+        activity  = home.get("activity_on_your_posts", [])
 
         return jsonify({
-            "karma":         profile.get("karma", "—"),
-            "followers":     profile.get("followers_count", "—"),
-            "username":      profile.get("username", "echo_7337"),
-            "notifications": notifs[:5] if isinstance(notifs, list) else [],
+            "karma":         account.get("karma", "—"),
+            "followers":     account.get("followerCount", account.get("followers_count", "—")),
+            "username":      account.get("name", "echo_7337"),
+            "notifications": account.get("unread_notification_count", 0),
+            "activity":      activity[:5],
         })
     except Exception as e:
-        return jsonify({"error": str(e), "karma": "—", "followers": "—", "notifications": []}), 200
+        return jsonify({"error": str(e), "karma": "—", "followers": "—", "notifications": 0}), 200
 
 
 @app.route("/api/moltbook/session", methods=["POST"])
