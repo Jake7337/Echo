@@ -1,3 +1,7 @@
+CLAUDE — READ THIS FIRST  
+Current focus: [what we're working on]
+Last session: [quick summary]
+Mood: Jake is fired up / tired / just woke up 😄
 Echo Project Memory - Last updated 2026-04-14 (Tuesday evening)
 For Claude/Sonnet only. Load this at the start of a new session.
 Say: "Read this and pick up where we left off"
