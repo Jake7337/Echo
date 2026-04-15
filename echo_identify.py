@@ -56,37 +56,43 @@ def _load_known_faces():
     name_to_label = {}   # name -> int label
     label_idx     = 0
 
-    for fname in sorted(os.listdir(KNOWN_FACES_DIR)):
-        if not fname.lower().endswith((".jpg", ".jpeg", ".png")):
-            continue
-        if fname == "last_snap.jpg":
-            continue  # debug snapshot, not a reference face
-        # Strip trailing _N suffix — jake_1.jpg, jake_2.jpg all map to "jake"
-        base = os.path.splitext(fname)[0]
-        name = re.sub(r"_\d+$", "", base)
+    # Walk subfolders (folder name = person name) and flat files (filename = person name)
+    entries = []
+    for entry in sorted(os.listdir(KNOWN_FACES_DIR)):
+        full = os.path.join(KNOWN_FACES_DIR, entry)
+        if os.path.isdir(full):
+            # Subfolder — use folder name as person name
+            for img_file in sorted(os.listdir(full)):
+                if img_file.lower().endswith((".jpg", ".jpeg", ".png")):
+                    entries.append((entry, os.path.join(full, img_file)))
+        elif entry.lower().endswith((".jpg", ".jpeg", ".png")) and entry != "last_snap.jpg":
+            # Flat file — strip _N suffix to get name
+            base = os.path.splitext(entry)[0]
+            name = re.sub(r"_\d+$", "", base)
+            entries.append((name, full))
 
+    for name, path in entries:
         # Assign or reuse label for this name
         if name not in name_to_label:
             name_to_label[name] = label_idx
             _label_map[label_idx] = name
             label_idx += 1
 
-        path = os.path.join(KNOWN_FACES_DIR, fname)
         img  = cv2.imread(path)
         if img is None:
-            print(f"[identify] Could not read {fname}")
+            print(f"[identify] Could not read {path}")
             continue
         gray     = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         detected = cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5)
         if len(detected) == 0:
-            print(f"[identify] No face detected in {fname} — try a clearer photo")
+            print(f"[identify] No face detected in {path} — try a clearer photo")
             continue
         x, y, w, h = detected[0]
         face_roi = gray[y:y+h, x:x+w]
         face_roi = cv2.resize(face_roi, (200, 200))
         faces.append(face_roi)
         labels.append(name_to_label[name])
-        print(f"[identify] Enrolled: {fname} → {name}")
+        print(f"[identify] Enrolled: {path} → {name}")
 
     if faces:
         _recognizer = cv2.face.LBPHFaceRecognizer_create()
