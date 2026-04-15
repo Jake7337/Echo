@@ -964,7 +964,7 @@ async function saveAwareness() {
       body: JSON.stringify(cfg),
     });
     document.getElementById("awareness-modal").remove();
-  } catch(e) { alert("Save failed — is echo_server running?"); }
+  } catch(e) { alert("Save failed: " + e.message); }
 }
 </script>
 </body>

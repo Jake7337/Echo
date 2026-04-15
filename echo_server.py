@@ -31,7 +31,7 @@ MOLTBOOK_URL  = "https://www.moltbook.com/api/v1"
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "echo-command-center"
-CORS(app)
+CORS(app, resources={r"/api/*": {"origins": "*", "methods": ["GET","POST","OPTIONS"], "allow_headers": ["Content-Type"]}})
 sio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
 
 # ── Process registry ───────────────────────────────────────────────────────
