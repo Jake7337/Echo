@@ -199,6 +199,19 @@ def api_chat():
     return jsonify({"reply": reply})
 
 
+# ── Identify route ─────────────────────────────────────────────────────────
+
+@app.route("/api/identify", methods=["POST"])
+def api_identify():
+    try:
+        from echo_identify import identify_person
+        person = identify_person(timeout=12)
+    except Exception as e:
+        person = "error"
+        print(f"[identify] {e}")
+    return jsonify({"person": person})
+
+
 # ── Moltbook routes ────────────────────────────────────────────────────────
 
 @app.route("/api/moltbook/stats")

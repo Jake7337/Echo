@@ -11,6 +11,7 @@ import sys
 import wave
 import socket
 import subprocess
+import threading
 import requests
 import speech_recognition as sr
 from piper import PiperVoice
@@ -28,8 +29,9 @@ MAX_HISTORY   = 20
 MIC_CARD      = 3   # Fifine Microphone
 SPEAKER_CARD  = 2   # USB AUDIO
 PIPER_MODEL   = os.path.join(os.path.dirname(os.path.abspath(__file__)), "en_US-lessac-medium.onnx")
-FACE_HOST     = "192.168.68.65"   # PC IP
-FACE_PORT     = 5005
+FACE_HOST      = "192.168.68.65"   # PC IP
+FACE_PORT      = 5005
+IDENTIFY_URL   = "http://192.168.68.65:5050/api/identify"
 
 _udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
@@ -142,18 +144,47 @@ def ask_ollama(system: str, prompt: str) -> str:
         return f"Echo couldn't respond — {e}"
 
 
+# ── Face identification ────────────────────────────────────────────────────────
+
+def start_identify() -> threading.Thread:
+    """Fire identify request to PC in background. Returns the thread."""
+    result_box = [None]
+
+    def _run():
+        try:
+            r = requests.post(IDENTIFY_URL, timeout=13)
+            result_box[0] = r.json().get("person", "unknown")
+        except Exception:
+            result_box[0] = "unknown"
+
+    t = threading.Thread(target=_run, daemon=True)
+    t.result_box = result_box
+    t.start()
+    return t
+
+def collect_identify(t: threading.Thread, wait: float = 8.0) -> str:
+    """Wait for identify thread to finish. Returns name or empty string."""
+    t.join(timeout=wait)
+    person = t.result_box[0] or "unknown"
+    if person in ("unknown", "no_face", "timeout", "error", "someone", None):
+        return ""
+    return person
+
+
 # ── Turn ───────────────────────────────────────────────────────────────────────
 
-def handle_turn(user_input: str, conversations: list) -> str:
+def handle_turn(user_input: str, conversations: list, person: str = "") -> str:
     identity = load_identity()
     history  = build_history_text(conversations)
+
+    person_ctx = f"\nThe person speaking right now appears to be {person}." if person else ""
 
     if history:
         prompt = f"CONVERSATION SO FAR:\n{history}\n\nJake: {user_input}\nEcho:"
     else:
         prompt = f"Jake: {user_input}\nEcho:"
 
-    return ask_ollama(identity, prompt)
+    return ask_ollama(identity + person_ctx, prompt)
 
 
 # ── Main loop ──────────────────────────────────────────────────────────────────
@@ -184,8 +215,14 @@ def main():
             speak("Talk later.", voice)
             break
 
+        # Fire identify in background — runs while we prep the prompt
+        id_thread = start_identify()
+
         set_face("thinking")
-        response = handle_turn(user_input, conversations)
+        person = collect_identify(id_thread)
+        if person:
+            print(f"[identify] Recognized: {person}")
+        response = handle_turn(user_input, conversations, person=person)
         print(f"Echo: {response}\n")
         set_face("talking")
         speak(response, voice)
