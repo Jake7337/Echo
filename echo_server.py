@@ -236,7 +236,7 @@ def save_awareness_config_get():
 def api_identify():
     try:
         from echo_identify import identify_person
-        person = identify_person(timeout=12)
+        person = identify_person(timeout=30)
     except Exception as e:
         person = "error"
         print(f"[identify] {e}")
