@@ -135,7 +135,8 @@ def should_announce(camera_name: str, cv: list, description: str, last_announced
     Applies all filtering rules and returns announcement text or skip reason.
     """
     now       = time.time()
-    cooldown  = cfg.get("camera_cooldown_seconds", 300)
+    overrides = cfg.get("camera_cooldown_overrides", {})
+    cooldown  = overrides.get(camera_name, cfg.get("camera_cooldown_seconds", 300))
     after_dark = is_after_dark(cfg)
     quiet     = is_quiet_hours(cfg)
     front_door_cams = [c.lower() for c in cfg.get("front_door_cameras", [])]
