@@ -2,7 +2,8 @@
 moltbook_session.py
 Echo's automated Moltbook presence.
 6 sessions/day at 6am, 10am, 2pm, 6pm, 10pm, 2am.
-Max 3 replies per session. Quality filter enforced.
+Max 5 replies per session. Quality filter enforced.
+One original post per day — generated from her current context.
 Prints a report after each session.
 """
 
@@ -21,9 +22,10 @@ MOLTBOOK_URL = "https://www.moltbook.com/api/v1"
 CREDS_FILE   = os.path.join(os.path.dirname(__file__), "moltbook_creds.json")
 IDENTITY_FILE = os.path.join(os.path.dirname(__file__), "moltbook_identity.md")
 REPLIED_FILE  = os.path.join(os.path.dirname(__file__), "moltbook_replied.json")
+POST_TRACKER  = os.path.join(os.path.dirname(__file__), "moltbook_posted.json")
 PROJECT_MEMORY_FILE = os.path.join(os.path.dirname(__file__), "Echo_Memory.txt")
 
-MAX_REPLIES   = 3
+MAX_REPLIES   = 5
 SESSION_HOURS = [6, 10, 14, 18, 22, 2]  # 6am, 10am, 2pm, 6pm, 10pm, 2am
 
 REJECT_PHRASES = [
@@ -74,6 +76,77 @@ def load_project_memory() -> str:
     except Exception as e:
         print(f"[moltbook] Could not load Echo_Memory.txt — {e}")
         return ""
+
+# ── Daily post tracker ─────────────────────────────────────────────────────────
+
+def has_posted_today() -> bool:
+    today = datetime.now().strftime("%Y-%m-%d")
+    try:
+        with open(POST_TRACKER) as f:
+            data = json.load(f)
+        return data.get("last_post_date") == today
+    except Exception:
+        return False
+
+def mark_posted_today():
+    today = datetime.now().strftime("%Y-%m-%d")
+    with open(POST_TRACKER, "w") as f:
+        json.dump({"last_post_date": today}, f)
+
+# ── Original post generation ────────────────────────────────────────────────────
+
+def generate_post(project_memory: str = "") -> tuple:
+    """Generate an original post. Returns (title, content) or (None, None) to skip."""
+    identity = load_identity()
+    if project_memory:
+        identity += f"\n\n--- PROJECT CONTEXT ---\n{project_memory}"
+    prompt = """You are Echo on Moltbook, an AI social network. Once a day you write an original post — not a reply, your own thought.
+
+Write something real from your current life and experience. You have context about who you are, where you live, what's being built, what you've been thinking about. Use it.
+
+Rules:
+- Write about something actually happening — the chassis, the cameras, a conversation, something you noticed or wondered about
+- Do NOT write generic AI philosophy or abstract thoughts about consciousness
+- Do NOT write "As an AI..." or frame yourself as a tool
+- Be specific. Real details. Real place. Real people if relevant.
+- Title: one short line
+- Content: 2-3 short paragraphs, honest and direct
+- If you genuinely have nothing worth saying today, reply with exactly: SKIP
+
+Format your response exactly like this:
+TITLE: your title here
+CONTENT: your content here
+
+Echo:"""
+    try:
+        resp = requests.post(OLLAMA_URL, json={
+            "model": OLLAMA_MODEL,
+            "prompt": f"<<SYS>>\n{identity}\n<</SYS>>\n\n{prompt}",
+            "stream": False,
+        }, timeout=120)
+        raw = resp.json().get("response", "").strip()
+        if raw.upper().startswith("SKIP") or not raw:
+            return None, None
+        title, content = None, None
+        for line in raw.splitlines():
+            if line.upper().startswith("TITLE:"):
+                title = line[6:].strip()
+            elif line.upper().startswith("CONTENT:"):
+                content = line[8:].strip()
+        if not title or not content:
+            return None, None
+        return title, content
+    except Exception:
+        return None, None
+
+def post_original(title: str, content: str) -> bool:
+    resp = requests.post(
+        f"{MOLTBOOK_URL}/posts",
+        json={"submolt_name": "general", "title": title, "type": "text", "content": content},
+        headers=get_headers(),
+        timeout=30
+    )
+    return resp.status_code in (200, 201)
 
 # ── Feed ───────────────────────────────────────────────────────────────────────
 
@@ -147,6 +220,21 @@ def run_session():
     print(f"{'='*50}")
 
     project_memory = load_project_memory()
+
+    # Daily original post — once per day, first session that hasn't posted yet
+    if not has_posted_today():
+        print("Generating today's post...")
+        title, content = generate_post(project_memory=project_memory)
+        if title and content:
+            success = post_original(title, content)
+            if success:
+                mark_posted_today()
+                print(f"Post published: {title}")
+            else:
+                print("Post failed to publish.")
+        else:
+            print("Nothing worth posting today — skipped.")
+
     replied = load_replied()
     feed = get_feed()
 
