@@ -236,11 +236,11 @@ def save_awareness_config_get():
 def api_identify():
     try:
         from echo_identify import identify_person
-        person = identify_person(timeout=30)
+        people = identify_person(timeout=30)
     except Exception as e:
-        person = "error"
+        people = ["error"]
         print(f"[identify] {e}")
-    return jsonify({"person": person})
+    return jsonify({"people": people})
 
 
 # ── Moltbook routes ────────────────────────────────────────────────────────

@@ -86,13 +86,13 @@ def speak(text: str):
 
 # ── Face identification ───────────────────────────────────────────────────────
 
-def identify_person_async() -> str:
-    """Call identify endpoint in a thread, return name or 'unknown'."""
-    result = ["unknown"]
+def identify_person_async() -> list:
+    """Call identify endpoint in a thread, return list of names."""
+    result = [["unknown"]]
     def _run():
         try:
             r = requests.post(IDENTIFY_URL, timeout=35)
-            result[0] = r.json().get("person", "unknown")
+            result[0] = r.json().get("people", ["unknown"])
         except Exception as e:
             print(f"[identify] {e}", flush=True)
     t = threading.Thread(target=_run, daemon=True)
@@ -105,28 +105,27 @@ def identify_person_async() -> str:
 def handle_desk_motion(last_greeted: dict):
     """Identify who's at the desk and greet them — once per hour per person."""
     print(f"[Echo camera] Motion — identifying...", flush=True)
-    person = identify_person_async()
-    print(f"[Echo camera] Identified: {person}", flush=True)
+    people = identify_person_async()
+    print(f"[Echo camera] Identified: {people}", flush=True)
 
-    if person in ("timeout", "error", "no_face", "unknown"):
-        speak("Someone's at the desk.")
+    SKIP = {"timeout", "error", "no_face", "unknown", "someone"}
+    known = [p for p in people if p not in SKIP]
+
+    if not known:
+        if "no_face" not in people:
+            speak("Someone's at the desk.")
         return
 
-    if person == "someone":
-        speak("Someone I don't recognize is at the desk.")
-        return
-
-    # Per-person cooldown — don't re-greet within GREET_COOLDOWN seconds
     now = time.time()
-    last = last_greeted.get(person, 0)
-    if now - last < GREET_COOLDOWN:
-        remaining = int((GREET_COOLDOWN - (now - last)) / 60)
-        print(f"[Echo camera] {person} already greeted — {remaining}m until next greeting", flush=True)
-        return
-
-    last_greeted[person] = now
-    greeting = GREETINGS.get(person.lower(), f"Hey {person.capitalize()}!")
-    speak(greeting)
+    for person in known:
+        last = last_greeted.get(person, 0)
+        if now - last < GREET_COOLDOWN:
+            remaining = int((GREET_COOLDOWN - (now - last)) / 60)
+            print(f"[Echo camera] {person} already greeted — {remaining}m until next greeting", flush=True)
+            continue
+        last_greeted[person] = now
+        greeting = GREETINGS.get(person.lower(), f"Hey {person.capitalize()}!")
+        speak(greeting)
 
 # ── Outdoor cameras ───────────────────────────────────────────────────────────
 
@@ -190,22 +189,26 @@ def should_announce(camera_name: str, cv: list, last_announced: dict, cfg: dict)
 
 # ── cv_detection lookup ───────────────────────────────────────────────────────
 
-async def get_cv_detection(blink, camera_name: str) -> list:
+async def get_camera_event(blink, camera_name: str) -> tuple:
+    """Returns (cv_detection list, blink_description string)."""
     from blinkpy import api as blink_api
     try:
         data = await blink_api.request_videos(blink, time=time.time() - 120, page=0)
         if not isinstance(data, dict):
-            return []
+            return [], ""
         for item in data.get("media", []):
             if item.get("device_name") == camera_name:
                 try:
-                    meta = json.loads(item.get("metadata") or "{}")
-                    return meta.get("cv_detection", [])
+                    meta        = json.loads(item.get("metadata") or "{}")
+                    cv          = meta.get("cv_detection", [])
+                    description = (item.get("description", "") or
+                                   meta.get("description", "") or "")
+                    return cv, description.strip()
                 except Exception:
-                    return []
+                    return [], ""
     except Exception:
         pass
-    return []
+    return [], ""
 
 # ── Blink setup ───────────────────────────────────────────────────────────────
 
@@ -276,7 +279,7 @@ async def watch(blink: Blink):
 
             if name == DESK_CAMERA:
                 # Cooldown — snap updates thumbnail, would loop without this
-                if time.time() - last_desk_greet < 120:
+                if time.time() - last_desk_greet < 60:
                     print(f"[Echo camera] Skipped — cooldown active", flush=True)
                     continue
                 last_desk_greet = time.time()
@@ -284,13 +287,15 @@ async def watch(blink: Blink):
                 continue
 
             # Outdoor camera — cv_detection + filter
-            cv = await get_cv_detection(blink, name)
+            cv, description = await get_camera_event(blink, name)
             announce, text = should_announce(name, cv, last_announced, cfg)
 
             if announce:
                 last_announced[name] = time.time()
-                speak(text)
-                print(f"[{name}] → {text}", flush=True)
+                # Use Blink's AI description if available, otherwise use generated text
+                speak_text = description if description else text
+                speak(speak_text)
+                print(f"[{name}] → {speak_text}", flush=True)
             else:
                 print(f"[{name}] → skipped ({text})", flush=True)
 

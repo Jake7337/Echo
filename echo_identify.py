@@ -173,20 +173,22 @@ async def _snap_blink() -> bytes | None:
 
 # ── Face recognition ──────────────────────────────────────────────────────────
 
-def _recognize(img_bytes: bytes) -> str:
-    """Detect and recognize face in image bytes using OpenCV LBPH."""
+def _recognize(img_bytes: bytes) -> list:
+    """Detect and recognize all faces in image bytes using OpenCV LBPH.
+    Returns a list of name strings — one per face detected.
+    """
     try:
         import cv2
     except ImportError:
-        return "unknown"
+        return ["unknown"]
 
     if _recognizer is None or not _label_map:
-        return "someone"
+        return ["someone"]
 
     img_array = np.frombuffer(img_bytes, dtype=np.uint8)
     img       = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
     if img is None:
-        return "unknown"
+        return ["unknown"]
 
     # Save snapshot for debugging — check known_faces/last_snap.jpg to see what camera grabbed
     debug_path = os.path.join(BASE_DIR, "known_faces", "last_snap.jpg")
@@ -195,32 +197,33 @@ def _recognize(img_bytes: bytes) -> str:
 
     gray     = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     cascade  = _get_cascade()
-    # Looser params: scaleFactor 1.05 catches more angles, minNeighbors 3 is less strict
     detected = cascade.detectMultiScale(gray, scaleFactor=1.05, minNeighbors=3, minSize=(30, 30))
 
     if len(detected) == 0:
         print("[identify] No face detected in snapshot")
-        return "no_face"
+        return ["no_face"]
 
-    x, y, w, h   = detected[0]
-    face_roi     = gray[y:y+h, x:x+w]
-    face_roi     = cv2.resize(face_roi, (200, 200))
+    results = []
+    for (x, y, w, h) in detected:
+        face_roi          = gray[y:y+h, x:x+w]
+        face_roi          = cv2.resize(face_roi, (200, 200))
+        label, confidence = _recognizer.predict(face_roi)
+        print(f"[identify] Prediction: label={label} confidence={confidence:.1f}")
+        if confidence < 80:
+            results.append(_label_map.get(label, "unknown"))
+        else:
+            results.append("unknown")
 
-    label, confidence = _recognizer.predict(face_roi)
-    print(f"[identify] Prediction: label={label} confidence={confidence:.1f}")
-
-    # Lower confidence = better match in LBPH. Add more training photos if getting wrong matches.
-    if confidence < 80:
-        return _label_map.get(label, "unknown")
-    return "unknown"
+    return results
 
 
 # ── Public interface ──────────────────────────────────────────────────────────
 
-def identify_person(timeout: int = 30) -> str:
+def identify_person(timeout: int = 30) -> list:
     """
     Snap Echo camera and return who's in frame.
-    Returns: name string, 'unknown', 'no_face', 'timeout', or 'error'
+    Returns: list of name strings — one per face detected.
+    Special values: ['timeout'], ['error'], ['no_face'], ['unknown']
     Synchronous — handles async internally.
     """
     try:
@@ -231,13 +234,13 @@ def identify_person(timeout: int = 30) -> str:
         loop.close()
     except asyncio.TimeoutError:
         print("[identify] Timed out waiting for snap")
-        return "timeout"
+        return ["timeout"]
     except Exception as e:
         print(f"[identify] Snap error: {e}")
-        return "error"
+        return ["error"]
 
     if not img_bytes:
-        return "unknown"
+        return ["unknown"]
 
     return _recognize(img_bytes)
 
