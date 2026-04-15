@@ -1,3 +1,8 @@
+CLAUDE — READ THIS FIRST
+Current focus: Getting Echo moving — Dupont jumper wires arriving Thursday April 17, GPIO wiring then motor test
+Last session: April 16 — recovered from Windows update, got all jobs back up, upgraded Moltbook reply quality, asearis-agent blocked
+Mood: Jake is building 🔥
+
 Echo Project Memory - Last updated 2026-04-16 (Wednesday)
 For Claude/Sonnet only. Load this at the start of a new session.
 Say: "Read this and pick up where we left off"
