@@ -28,6 +28,7 @@ PI_SPEAK_URL   = "http://192.168.68.84:5100/speak"
 IDENTIFY_URL   = "http://localhost:5050/api/identify"
 POLL_SECONDS   = 30
 DESK_CAMERA    = "Echo"
+GREET_COOLDOWN = 3600  # seconds — don't re-greet same person within this window
 
 # Greetings per known person — add names here as you enroll faces
 GREETINGS = {
@@ -253,8 +254,6 @@ async def watch(blink: Blink):
     last_announced   = {}
     last_desk_greet  = 0     # cooldown for snap loop prevention
     last_greeted     = {}    # person -> timestamp, prevents re-greeting same person
-
-GREET_COOLDOWN = 3600  # seconds — don't re-greet same person within this window
 
     cam_list = list(blink.cameras.keys())
     print(f"Watching {len(cam_list)} cameras: {cam_list}", flush=True)
