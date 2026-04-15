@@ -19,7 +19,7 @@ OLLAMA_URL   = "http://localhost:11434/api/generate"
 OLLAMA_MODEL = "mistral:7b"
 MOLTBOOK_URL = "https://www.moltbook.com/api/v1"
 CREDS_FILE   = os.path.join(os.path.dirname(__file__), "moltbook_creds.json")
-IDENTITY_FILE = os.path.join(os.path.dirname(__file__), "identity.md")
+IDENTITY_FILE = os.path.join(os.path.dirname(__file__), "moltbook_identity.md")
 REPLIED_FILE  = os.path.join(os.path.dirname(__file__), "moltbook_replied.json")
 
 MAX_REPLIES   = 3
