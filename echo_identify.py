@@ -57,6 +57,8 @@ def _load_known_faces():
     for fname in sorted(os.listdir(KNOWN_FACES_DIR)):
         if not fname.lower().endswith((".jpg", ".jpeg", ".png")):
             continue
+        if fname == "last_snap.jpg":
+            continue  # debug snapshot, not a reference face
         name = os.path.splitext(fname)[0]
         path = os.path.join(KNOWN_FACES_DIR, fname)
         img  = cv2.imread(path)
@@ -118,21 +120,30 @@ async def _snap_blink() -> bytes | None:
         print(f"[identify] Camera '{CAMERA_NAME}' not found. Available: {list(blink.cameras.keys())}")
         return None
 
+    # Refresh to get current camera state — no snap needed, just grab what's visible now
     try:
-        await cam.snap_picture()
-        await asyncio.sleep(3)
         await blink.refresh()
     except Exception as e:
-        print(f"[identify] Snap warning: {e}")
+        print(f"[identify] Refresh warning: {e}")
 
     thumb_url = cam.thumbnail
+    print(f"[identify] Thumbnail URL: {thumb_url}")
+
     if not thumb_url:
+        print("[identify] No thumbnail URL")
         return None
 
+    # Ensure URL is absolute
+    if thumb_url.startswith("/"):
+        thumb_url = f"https://rest-prod.immedia-semi.com{thumb_url}"
+
     try:
-        # blinkpy uses aiohttp — must await
-        async with blink.auth.session.get(thumb_url) as resp:
-            return await resp.read()
+        headers = blink.auth.header  # {"TOKEN_AUTH": "<token>"}
+        async with blink.auth.session.get(thumb_url, headers=headers) as resp:
+            print(f"[identify] HTTP {resp.status}")
+            data = await resp.read()
+            print(f"[identify] Downloaded {len(data)} bytes")
+            return data
     except Exception as e:
         print(f"[identify] Thumbnail download failed: {e}")
         return None
@@ -155,9 +166,15 @@ def _recognize(img_bytes: bytes) -> str:
     if img is None:
         return "unknown"
 
+    # Save snapshot for debugging — check known_faces/last_snap.jpg to see what camera grabbed
+    debug_path = os.path.join(BASE_DIR, "known_faces", "last_snap.jpg")
+    cv2.imwrite(debug_path, img)
+    print(f"[identify] Snapshot saved to {debug_path}")
+
     gray     = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     cascade  = _get_cascade()
-    detected = cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5)
+    # Looser params: scaleFactor 1.05 catches more angles, minNeighbors 3 is less strict
+    detected = cascade.detectMultiScale(gray, scaleFactor=1.05, minNeighbors=3, minSize=(30, 30))
 
     if len(detected) == 0:
         print("[identify] No face detected in snapshot")
@@ -170,15 +187,15 @@ def _recognize(img_bytes: bytes) -> str:
     label, confidence = _recognizer.predict(face_roi)
     print(f"[identify] Prediction: label={label} confidence={confidence:.1f}")
 
-    # Lower confidence = better match in LBPH. Threshold ~80 is reliable.
-    if confidence < 80:
+    # Lower confidence = better match in LBPH. Blink thumbnails are compressed so threshold is looser.
+    if confidence < 140:
         return _label_map.get(label, "unknown")
     return "unknown"
 
 
 # ── Public interface ──────────────────────────────────────────────────────────
 
-def identify_person(timeout: int = 12) -> str:
+def identify_person(timeout: int = 25) -> str:
     """
     Snap Echo camera and return who's in frame.
     Returns: name string, 'unknown', 'no_face', 'timeout', or 'error'
@@ -187,7 +204,7 @@ def identify_person(timeout: int = 12) -> str:
     try:
         loop = asyncio.new_event_loop()
         img_bytes = loop.run_until_complete(
-            asyncio.wait_for(_snap_blink(), timeout=timeout - 2)
+            asyncio.wait_for(_snap_blink(), timeout=timeout - 3)
         )
         loop.close()
     except asyncio.TimeoutError:
