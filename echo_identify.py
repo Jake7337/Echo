@@ -208,10 +208,12 @@ def _recognize(img_bytes: bytes) -> list:
         face_roi          = gray[y:y+h, x:x+w]
         face_roi          = cv2.resize(face_roi, (200, 200))
         label, confidence = _recognizer.predict(face_roi)
-        print(f"[identify] Prediction: label={label} confidence={confidence:.1f}")
-        if confidence < 80:
-            results.append(_label_map.get(label, "unknown"))
+        name              = _label_map.get(label, "unknown")
+        print(f"[identify] Prediction: best_match={name} confidence={confidence:.1f} (threshold=95, lower=better)")
+        if confidence < 95:
+            results.append(name)
         else:
+            print(f"[identify] Rejected {name} — confidence too high ({confidence:.1f} > 95)")
             results.append("unknown")
 
     return results
