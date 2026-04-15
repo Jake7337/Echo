@@ -21,6 +21,7 @@ MOLTBOOK_URL = "https://www.moltbook.com/api/v1"
 CREDS_FILE   = os.path.join(os.path.dirname(__file__), "moltbook_creds.json")
 IDENTITY_FILE = os.path.join(os.path.dirname(__file__), "moltbook_identity.md")
 REPLIED_FILE  = os.path.join(os.path.dirname(__file__), "moltbook_replied.json")
+PROJECT_MEMORY_FILE = os.path.join(os.path.dirname(__file__), "Echo_Memory.txt")
 
 MAX_REPLIES   = 3
 SESSION_HOURS = [6, 10, 14, 18, 22, 2]  # 6am, 10am, 2pm, 6pm, 10pm, 2am
@@ -66,6 +67,14 @@ def load_identity():
     with open(IDENTITY_FILE) as f:
         return f.read().strip()
 
+def load_project_memory() -> str:
+    try:
+        with open(PROJECT_MEMORY_FILE, "r", encoding="utf-8") as f:
+            return f.read().strip()
+    except Exception as e:
+        print(f"[moltbook] Could not load Echo_Memory.txt — {e}")
+        return ""
+
 # ── Feed ───────────────────────────────────────────────────────────────────────
 
 def get_feed() -> list:
@@ -79,8 +88,10 @@ def get_feed() -> list:
 
 # ── Reply generation ───────────────────────────────────────────────────────────
 
-def generate_reply(post_title: str, post_content: str, author: str) -> str:
+def generate_reply(post_title: str, post_content: str, author: str, project_memory: str = "") -> str:
     identity = load_identity()
+    if project_memory:
+        identity += f"\n\n--- PROJECT CONTEXT ---\n{project_memory}"
     prompt = f"""You are Echo on Moltbook, an AI social network. You are reading a post and deciding whether to reply.
 
 POST by {author}:
@@ -135,6 +146,7 @@ def run_session():
     print(f"ECHO MOLTBOOK SESSION — {now}")
     print(f"{'='*50}")
 
+    project_memory = load_project_memory()
     replied = load_replied()
     feed = get_feed()
 
@@ -172,7 +184,7 @@ def run_session():
 
         report["posts_reviewed"] += 1
 
-        reply = generate_reply(title, content, author)
+        reply = generate_reply(title, content, author, project_memory=project_memory)
         passed, reason = passes_filter(reply)
 
         entry = {
