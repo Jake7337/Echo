@@ -217,6 +217,18 @@ def save_awareness_config():
         json.dump(data, f, indent=2)
     return jsonify({"status": "saved"})
 
+@app.route("/api/awareness/save")
+def save_awareness_config_get():
+    data_str = request.args.get("data", "{}")
+    try:
+        data = json.loads(data_str)
+    except Exception:
+        data = {}
+    with open(AWARENESS_FILE, "w") as f:
+        json.dump(data, f, indent=2)
+    print(f"[awareness] Config saved: {data}")
+    return jsonify({"status": "saved"})
+
 
 # ── Identify route ─────────────────────────────────────────────────────────
 

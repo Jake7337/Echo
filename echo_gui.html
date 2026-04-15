@@ -958,11 +958,7 @@ async function saveAwareness() {
     vip_faces: document.getElementById("aw-vip").value.split(",").map(s=>s.trim().toLowerCase()).filter(Boolean),
   };
   try {
-    await fetch("http://localhost:5050/api/awareness/config", {
-      method: "POST",
-      headers: {"Content-Type":"text/plain"},
-      body: JSON.stringify(cfg),
-    });
+    await fetch(`http://localhost:5050/api/awareness/save?data=${encodeURIComponent(JSON.stringify(cfg))}`);
     document.getElementById("awareness-modal").remove();
   } catch(e) { alert("Save failed: " + e.message); }
 }
