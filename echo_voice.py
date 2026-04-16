@@ -190,7 +190,7 @@ def speak(text: str, voice: PiperVoice = None):
     """Route speech through pi_speak server so audio device is owned in one place."""
     import requests
     try:
-        requests.post("http://127.0.0.1:5100/speak", json={"text": text}, timeout=15)
+        requests.post("http://127.0.0.1:5100/speak", json={"text": text}, timeout=90)
     except Exception as e:
         print(f"[voice] speak failed — {e}", flush=True)
 
