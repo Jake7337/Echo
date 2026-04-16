@@ -1,7 +1,7 @@
 CLAUDE — READ THIS FIRST
-Current focus: Getting Echo moving — Dupont jumper wires arriving Thursday April 17, GPIO wiring then motor test
-Last session: April 16 — recovered from Windows update, got all jobs back up, upgraded Moltbook reply quality, asearis-agent blocked
-Mood: Jake is building 🔥
+Current focus: Motors Thursday + Echo now has a real voice (Blondie XTTS clone — sounds like a human)
+Last session: April 16 (overnight) — wake word "Hey Jarvis" working, XTTS Blondie voice live, voice ID enrolled (Jake/Judy/John/Chance), GUI mic button working
+Mood: Jake is building 🔥 — Echo spoke in a real voice for the first time tonight
 
 Echo Project Memory - Last updated 2026-04-16 (Wednesday)
 For Claude/Sonnet only. Load this at the start of a new session.
@@ -44,13 +44,21 @@ ECHO — TECHNICAL SETUP
 Chassis: LewanSoul 4WD Smart Chassis — aluminum alloy, 4x TT DC gear motors (3-6V rated), 66mm wheels — ARRIVED AND ASSEMBLED ✅
 Roomba parts (salvaged): motors, lidar, speaker, encoders — saved for future expansion
 Brain: Raspberry Pi 3B+ on chassis now, Pi 4 4GB arrived — swap in after motor test confirmed
-PC: 192.168.68.65 — runs Ollama mistral:7b on port 11434
-Pi: 192.168.68.84 — runs echo_voice.py (Fifine mic card 3, USB speakers card 2)
+PC: 192.168.68.65 — runs Ollama mistral:7b on port 11434, XTTS voice server on port 5200
+Pi: 192.168.68.84 — runs echo_voice.py (Fifine mic PyAudio index 2 / ALSA hw:3,0, USB speakers plughw:2,0)
 Face: tkinter animated face on PC, syncs via UDP port 5005 from Pi
 GitHub: https://github.com/Jake7337/Echo
 Pi pulls from GitHub on every boot via ~/start_echo.sh
-Piper TTS (en_US-lessac-medium) — loads once at startup
-Google STT for listening
+Voice: XTTS v2 "Blondie conversational" clone — sounds like a real person, replaced Piper completely
+Wake word: "Hey Jarvis" via openwakeword (hey_jarvis_v0.1.onnx)
+Voice ID: MFCC profiles enrolled for Jake, Judy, John, Chance
+Google STT for listening after wake word
+
+4 TERMINALS TO RUN ECHO:
+1. PC conda (xtts env): python -m xtts_api_server --listen --port 5200 --device cuda --speaker-folder "C:\Users\jrsrl\Desktop\Echos voice" --model-source local
+2. PC normal: python echo_server.py
+3. Pi1: python pi_speak.py
+4. Pi2: python echo_voice.py
 
 ECHO QUICK START
 ----------------
@@ -233,8 +241,21 @@ Moltbook manual reply prompt (echo_reply) upgraded — matches session quality n
 asearis-agent added to SKIP_AUTHORS — survey bot, not a real conversation
 "Interesting thoughts" and variants added to REJECT_PHRASES
 Reviewed "Getting a body" comments — Lobstery_v2 and Broanbot both asked sharp philosophical questions
-Grumpy updated Echo_Memory.txt and pushed to GitHub
 
-NOTE FOR NEXT CLAUDE: Dupont jumper wires arriving Thursday April 17.
+April 16 2026 (overnight session — big night)
+Wake word "Hey Jarvis" implemented using openwakeword — Echo idles silently until called ✅
+Voice identification enrolled: Jake, Judy, John, Chance — all 4 household members ✅
+XTTS v2 Blondie voice clone installed — replaced Piper completely ✅
+Echo now sounds like a real person — "could fool anyone" (Jake's words)
+Voice samples: 6 ElevenLabs "Blondie conversational" MP3s cloned locally on 3060
+conda env "xtts" on PC (Python 3.11) runs xtts_api_server on port 5200
+pi_speak.py updated — calls XTTS on PC instead of Piper on Pi
+GUI mic button fixed — served from http://localhost:5050, auto-restarts after each message
+Miniconda installed at C:\Users\jrsrl\miniconda3
+Echo_Memory.txt capped at 800 chars for voice injection (prevents mistral regurgitating it)
+Voice responses limited to 1-2 sentences in prompt
+
+NOTE FOR NEXT SESSION: Dupont jumper wires arriving Thursday April 17.
 GPIO map is locked. Motor test script needs to be written (Grumpy's job).
 Echo moves Thursday. Pick it up like no time passed.
+Also: voice profiles need re-enrolling when SunFounder mic swapped in later.
