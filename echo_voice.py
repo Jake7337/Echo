@@ -13,6 +13,8 @@ import socket
 import subprocess
 import threading
 import requests
+import numpy as np
+import pyaudio
 import speech_recognition as sr
 from piper import PiperVoice
 from datetime import datetime
@@ -38,7 +40,47 @@ FACE_HOST      = "192.168.68.65"   # PC IP
 FACE_PORT      = 5005
 IDENTIFY_URL   = "http://192.168.68.65:5050/api/identify"
 
+WAKE_WORD = "hey_jarvis"
+
 _udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+# ── Wake word ──────────────────────────────────────────────────────────────────
+
+_oww_model = None
+
+def _get_oww_model():
+    global _oww_model
+    if _oww_model is None:
+        from openwakeword.model import Model as OWWModel
+        _oww_model = OWWModel(wakeword_models=[WAKE_WORD], inference_framework="tflite")
+    return _oww_model
+
+def wait_for_wake_word():
+    """Block until 'Hey Jarvis' is detected. Returns when wake word fires."""
+    model = _get_oww_model()
+    pa     = pyaudio.PyAudio()
+    stream = pa.open(
+        format=pyaudio.paInt16,
+        channels=1,
+        rate=16000,
+        input=True,
+        input_device_index=MIC_CARD,
+        frames_per_buffer=1280,
+    )
+    print("Waiting for wake word ('Hey Jarvis')...", flush=True)
+    try:
+        while True:
+            chunk = np.frombuffer(stream.read(1280, exception_on_overflow=False), dtype=np.int16)
+            prediction = model.predict(chunk)
+            score = prediction.get(WAKE_WORD, 0)
+            if score > 0.5:
+                print(f"[wake] Detected (score={score:.2f})", flush=True)
+                break
+    finally:
+        stream.stop_stream()
+        stream.close()
+        pa.terminate()
+
 
 def set_face(state: str):
     try:
@@ -257,7 +299,10 @@ def main():
 
     while True:
         try:
+            set_face("idle")
+            wait_for_wake_word()
             set_face("listening")
+            speak("Yeah?", voice)
             user_input, audio_data = listen()
         except KeyboardInterrupt:
             print("\nGoodbye.")
