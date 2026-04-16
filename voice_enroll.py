@@ -26,7 +26,7 @@ def enroll(name: str):
     r.energy_threshold  = 200
     r.pause_threshold   = 1.0
 
-    mic_index = 3  # Fifine mic is card 3 on this Pi (matches MIC_CARD in echo_voice.py)
+    mic_index = 2  # Fifine Microphone is PyAudio index 2 on this Pi (ALSA hw:3,0)
 
     samples = []
     attempt = 0
