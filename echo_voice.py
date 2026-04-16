@@ -14,7 +14,6 @@ import subprocess
 import threading
 import requests
 import numpy as np
-import pyaudio
 import speech_recognition as sr
 from piper import PiperVoice
 from datetime import datetime
@@ -61,6 +60,7 @@ def _get_oww_model():
 
 def wait_for_wake_word():
     """Block until 'Hey Jarvis' is detected. Captures at 44100Hz, resamples to 16kHz for openwakeword."""
+    import pyaudio
     from scipy.signal import resample_poly
     model    = _get_oww_model()
     MIC_RATE = 44100
