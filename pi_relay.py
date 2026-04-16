@@ -38,7 +38,10 @@ JOBS = {
 }
 
 
+AUTORESTART_JOBS = {"pi_speak"}  # jobs that should restart automatically if they crash
+
 def _stream_output(job_id: str, proc):
+    import time
     try:
         for line in iter(proc.stdout.readline, b""):
             text = line.decode("utf-8", errors="replace").rstrip()
@@ -48,6 +51,12 @@ def _stream_output(job_id: str, proc):
                 sio.emit("pi_log", {"job": job_id, "line": text, "ts": ts})
         JOBS[job_id]["status"] = "stopped"
         sio.emit("pi_status", {"job": job_id, "status": "stopped"})
+        if job_id in AUTORESTART_JOBS and JOBS[job_id].get("proc") is not None:
+            from datetime import datetime
+            ts = datetime.now().strftime("%H:%M:%S")
+            sio.emit("pi_log", {"job": job_id, "line": f"[relay] {job_id} exited — restarting in 3s...", "ts": ts})
+            time.sleep(3)
+            start_job(job_id)
     except Exception:
         pass
 
