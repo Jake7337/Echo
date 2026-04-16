@@ -320,7 +320,7 @@ def main():
             set_face("idle")
             wait_for_wake_word()
             set_face("listening")
-            import time; time.sleep(0.3)  # brief pause before listening
+            import time; time.sleep(2.0)  # wait for wake word audio to clear mic
             user_input, audio_data = listen()
         except KeyboardInterrupt:
             print("\nGoodbye.")
