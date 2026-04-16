@@ -109,11 +109,15 @@ def load_identity() -> str:
     with open(IDENTITY_FILE, "r", encoding="utf-8") as f:
         return f.read().strip()
 
+MAX_PROJECT_MEMORY = 800  # chars — enough context, not enough to overwhelm mistral
+
 def load_project_memory() -> str:
-    """Load Echo_Memory.txt — pulled from GitHub on every boot so always current."""
+    """Load the tail of Echo_Memory.txt — most recent context only."""
     try:
         with open(PROJECT_MEMORY_FILE, "r", encoding="utf-8") as f:
-            return f.read().strip()
+            text = f.read().strip()
+        # Take the last MAX_PROJECT_MEMORY chars so recent info wins
+        return text[-MAX_PROJECT_MEMORY:] if len(text) > MAX_PROJECT_MEMORY else text
     except Exception as e:
         print(f"[voice] Could not load Echo_Memory.txt — {e}", flush=True)
         return ""
