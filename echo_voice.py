@@ -59,46 +59,41 @@ def _get_oww_model():
     return _oww_model
 
 def wait_for_wake_word():
-    """Block until 'Hey Jarvis' is detected. Captures at 44100Hz, resamples to 16kHz for openwakeword."""
-    import pyaudio
+    """Block until 'Hey Jarvis' is detected. Uses arecord to avoid pyaudio/ALSA segfaults."""
     from scipy.signal import resample_poly
-    model    = _get_oww_model()
-    MIC_RATE = 44100
-    OWW_RATE = 16000
-    MIC_CHUNK = int(MIC_RATE * 80 / 1000)  # 80ms of audio at 44100Hz
-    pa     = pyaudio.PyAudio()
-    stream = pa.open(
-        format=pyaudio.paInt16,
-        channels=1,
-        rate=MIC_RATE,
-        input=True,
-        input_device_index=MIC_CARD,
-        frames_per_buffer=MIC_CHUNK,
-    )
-    # Reset model prediction buffer so prior state doesn't re-trigger
+    model        = _get_oww_model()
+    MIC_RATE     = 44100
+    OWW_RATE     = 16000
+    CHUNK_FRAMES = int(MIC_RATE * 80 / 1000)  # 80ms at 44100Hz = 3528 frames
+    CHUNK_BYTES  = CHUNK_FRAMES * 2            # 16-bit = 2 bytes per frame
+
     for key in model.prediction_buffer:
         model.prediction_buffer[key].clear()
 
+    proc = subprocess.Popen(
+        ["arecord", "-D", "hw:3,0", "-f", "S16_LE", "-r", str(MIC_RATE), "-c", "1", "-q", "-"],
+        stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+    )
     print("Waiting for wake word ('Hey Jarvis')...", flush=True)
     try:
         while True:
-            raw       = stream.read(MIC_CHUNK, exception_on_overflow=False)
+            raw = proc.stdout.read(CHUNK_BYTES)
+            if len(raw) < CHUNK_BYTES:
+                break
             audio_44k = np.frombuffer(raw, dtype=np.int16).astype(np.float32)
             audio_16k = resample_poly(audio_44k, OWW_RATE, MIC_RATE).astype(np.int16)
             prediction = model.predict(audio_16k)
             score = prediction.get("hey_jarvis_v0.1", 0)
             if score > 0.5:
                 print(f"[wake] Detected (score={score:.2f})", flush=True)
-                # Drain buffer and reset model before returning
                 for _ in range(5):
-                    stream.read(MIC_CHUNK, exception_on_overflow=False)
+                    proc.stdout.read(CHUNK_BYTES)
                 for key in model.prediction_buffer:
                     model.prediction_buffer[key].clear()
                 break
     finally:
-        stream.stop_stream()
-        stream.close()
-        pa.terminate()
+        proc.terminate()
+        proc.wait()
 
 
 def set_face(state: str):
