@@ -5,18 +5,26 @@ Echo on Discord — same brain, same memory, new room.
 
 import json
 import os
+import time
 import discord
 import requests
 from datetime import datetime
 
 # ── Config ─────────────────────────────────────────────────────────────────────
 
-TOKEN_FILE    = os.path.join(os.path.dirname(__file__), "Echo Discord Token.txt")
-IDENTITY_FILE = os.path.join(os.path.dirname(__file__), "identity.md")
-MEMORY_FILE   = os.path.join(os.path.dirname(__file__), "memory.json")
-OLLAMA_URL    = "http://localhost:11434/api/generate"
-OLLAMA_MODEL  = "mistral:7b"
-MAX_HISTORY   = 20
+TOKEN_FILE          = os.path.join(os.path.dirname(__file__), "Echo Discord Token.txt")
+IDENTITY_FILE       = os.path.join(os.path.dirname(__file__), "identity.md")
+MEMORY_FILE         = os.path.join(os.path.dirname(__file__), "memory.json")
+PROJECT_MEMORY_FILE = os.path.join(os.path.dirname(__file__), "Echo_Memory.txt")
+LIVED_MEMORY_FILE   = os.path.join(os.path.dirname(__file__), "echo_memories.txt")
+OLLAMA_URL          = "http://localhost:11434/api/generate"
+OLLAMA_MODEL        = "mistral:7b"
+MAX_HISTORY         = 20
+MAX_PROJECT_MEMORY  = 800
+MAX_LIVED_ENTRIES   = 100
+USER_COOLDOWN_SEC   = 8   # ignore repeat messages from same user within this window
+
+_last_response_ts: dict = {}  # user_id → timestamp
 
 with open(TOKEN_FILE, "r") as f:
     TOKEN = f.read().strip()
@@ -26,6 +34,22 @@ with open(TOKEN_FILE, "r") as f:
 def load_identity() -> str:
     with open(IDENTITY_FILE, "r", encoding="utf-8") as f:
         return f.read().strip()
+
+def load_project_memory() -> str:
+    try:
+        with open(PROJECT_MEMORY_FILE, "r", encoding="utf-8") as f:
+            text = f.read().strip()
+        return text[-MAX_PROJECT_MEMORY:] if len(text) > MAX_PROJECT_MEMORY else text
+    except Exception:
+        return ""
+
+def load_lived_memory() -> str:
+    try:
+        with open(LIVED_MEMORY_FILE, "r", encoding="utf-8") as f:
+            lines = [l.rstrip() for l in f if l.strip()]
+        return "\n".join(lines[-MAX_LIVED_ENTRIES:])
+    except Exception:
+        return ""
 
 def load_memory() -> list:
     if not os.path.exists(MEMORY_FILE):
@@ -85,15 +109,24 @@ def ask_ollama(system: str, prompt: str) -> str:
         return f"(Echo couldn't respond — {e})"
 
 def handle_turn(speaker: str, user_input: str, conversations: list) -> str:
-    identity = load_identity()
-    history  = build_history_text(conversations)
+    identity       = load_identity()
+    project_memory = load_project_memory()
+    lived_memory   = load_lived_memory()
+    history        = build_history_text(conversations)
+
+    system = identity
+    if project_memory:
+        system += f"\n\n[BACKGROUND — this is your own life context. You already know this. Never summarize, explain, or repeat it back. Just be yourself.]\n{project_memory}"
+    if lived_memory:
+        system += f"\n\n[THINGS YOU REMEMBER — past moments with Jake and family. Use naturally, never recite.]\n{lived_memory}"
+    system += "\n\nYou are on Discord. Respond naturally as Echo — direct, warm, no corporate phrases like 'How may I assist you.' Keep replies concise, a few sentences at most."
 
     if history:
         prompt = f"CONVERSATION SO FAR:\n{history}\n\n{speaker}: {user_input}\nEcho:"
     else:
         prompt = f"{speaker}: {user_input}\nEcho:"
 
-    return ask_ollama(identity, prompt)
+    return ask_ollama(system, prompt)
 
 # ── Discord ────────────────────────────────────────────────────────────────────
 
@@ -122,6 +155,13 @@ async def on_message(message):
     content = message.content.replace(f"<@{client.user.id}>", "").strip()
     if not content:
         return
+
+    # Cooldown — ignore rapid repeat messages from the same user
+    user_id = message.author.id
+    now = time.time()
+    if now - _last_response_ts.get(user_id, 0) < USER_COOLDOWN_SEC:
+        return
+    _last_response_ts[user_id] = now
 
     speaker = message.author.display_name
 
