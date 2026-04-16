@@ -26,6 +26,9 @@ def speak():
     if not text:
         return jsonify({"error": "no text"}), 400
 
+    # Truncate long responses — XTTS times out on walls of text
+    if len(text) > 400:
+        text = text[:400].rsplit(" ", 1)[0] + "..."
     print(f"Speaking: {text}")
     try:
         resp = requests.post(

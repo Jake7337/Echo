@@ -288,9 +288,9 @@ def handle_turn(user_input: str, conversations: list, project_memory: str = "", 
         system += f"\nThe person speaking right now appears to be {person}."
 
     if history:
-        prompt = f"CONVERSATION SO FAR:\n{history}\n\nJake: {user_input}\nEcho:"
+        prompt = f"CONVERSATION SO FAR:\n{history}\n\nJake: {user_input}\nEcho (respond in 1-2 sentences, spoken voice, no lists):"
     else:
-        prompt = f"Jake: {user_input}\nEcho:"
+        prompt = f"Jake: {user_input}\nEcho (respond in 1-2 sentences, spoken voice, no lists):"
 
     return ask_ollama(system, prompt)
 
