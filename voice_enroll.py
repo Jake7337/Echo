@@ -26,7 +26,7 @@ def enroll(name: str):
     r.energy_threshold  = 200
     r.pause_threshold   = 1.0
 
-    mic_index = 2  # Fifine Microphone is PyAudio index 2 on this Pi (ALSA hw:3,0)
+    mic_index = 1  # USB mic is PyAudio index 1 on this Pi (ALSA hw:2,0)
 
     samples = []
     attempt = 0

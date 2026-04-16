@@ -31,7 +31,7 @@ def speak():
         resp = requests.post(
             XTTS_URL,
             json={"text": text, "speaker_wav": SPEAKER_WAV, "language": "en"},
-            timeout=30,
+            timeout=60,
         )
         resp.raise_for_status()
         wav_bytes = resp.content
