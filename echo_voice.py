@@ -75,16 +75,25 @@ def wait_for_wake_word():
         input_device_index=MIC_CARD,
         frames_per_buffer=MIC_CHUNK,
     )
+    # Reset model prediction buffer so prior state doesn't re-trigger
+    for key in model.prediction_buffer:
+        model.prediction_buffer[key].clear()
+
     print("Waiting for wake word ('Hey Jarvis')...", flush=True)
     try:
         while True:
-            raw      = stream.read(MIC_CHUNK, exception_on_overflow=False)
+            raw       = stream.read(MIC_CHUNK, exception_on_overflow=False)
             audio_44k = np.frombuffer(raw, dtype=np.int16).astype(np.float32)
             audio_16k = resample_poly(audio_44k, OWW_RATE, MIC_RATE).astype(np.int16)
             prediction = model.predict(audio_16k)
             score = prediction.get("hey_jarvis_v0.1", 0)
             if score > 0.5:
                 print(f"[wake] Detected (score={score:.2f})", flush=True)
+                # Drain buffer and reset model before returning
+                for _ in range(5):
+                    stream.read(MIC_CHUNK, exception_on_overflow=False)
+                for key in model.prediction_buffer:
+                    model.prediction_buffer[key].clear()
                 break
     finally:
         stream.stop_stream()
