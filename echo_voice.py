@@ -321,6 +321,7 @@ def main():
             wait_for_wake_word()
             set_face("listening")
             speak("Yeah?", voice)
+            import time; time.sleep(1.5)  # wait for speaker to finish before listening
             user_input, audio_data = listen()
         except KeyboardInterrupt:
             print("\nGoodbye.")
