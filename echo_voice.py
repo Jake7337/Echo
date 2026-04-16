@@ -282,9 +282,9 @@ def handle_turn(user_input: str, conversations: list, project_memory: str = "", 
 
     system = identity
     if project_memory:
-        system += f"\n\n--- PROJECT CONTEXT ---\n{project_memory}"
+        system += f"\n\n[BACKGROUND — this is your own life context. You already know this. Never summarize, explain, or repeat it back. Just be yourself.]\n{project_memory}"
     if lived_memory:
-        system += f"\n\n--- THINGS I REMEMBER ---\n{lived_memory}"
+        system += f"\n\n[THINGS YOU REMEMBER — past moments with Jake and family. Use naturally, never recite.]\n{lived_memory}"
     if person:
         system += f"\nThe person speaking right now appears to be {person}."
 
