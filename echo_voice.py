@@ -60,22 +60,28 @@ def _get_oww_model():
     return _oww_model
 
 def wait_for_wake_word():
-    """Block until 'Hey Jarvis' is detected. Returns when wake word fires."""
-    model = _get_oww_model()
+    """Block until 'Hey Jarvis' is detected. Captures at 44100Hz, resamples to 16kHz for openwakeword."""
+    from scipy.signal import resample_poly
+    model    = _get_oww_model()
+    MIC_RATE = 44100
+    OWW_RATE = 16000
+    MIC_CHUNK = int(MIC_RATE * 80 / 1000)  # 80ms of audio at 44100Hz
     pa     = pyaudio.PyAudio()
     stream = pa.open(
         format=pyaudio.paInt16,
         channels=1,
-        rate=16000,
+        rate=MIC_RATE,
         input=True,
         input_device_index=MIC_CARD,
-        frames_per_buffer=1280,
+        frames_per_buffer=MIC_CHUNK,
     )
     print("Waiting for wake word ('Hey Jarvis')...", flush=True)
     try:
         while True:
-            chunk = np.frombuffer(stream.read(1280, exception_on_overflow=False), dtype=np.int16)
-            prediction = model.predict(chunk)
+            raw      = stream.read(MIC_CHUNK, exception_on_overflow=False)
+            audio_44k = np.frombuffer(raw, dtype=np.int16).astype(np.float32)
+            audio_16k = resample_poly(audio_44k, OWW_RATE, MIC_RATE).astype(np.int16)
+            prediction = model.predict(audio_16k)
             score = prediction.get("hey_jarvis_v0.1", 0)
             if score > 0.5:
                 print(f"[wake] Detected (score={score:.2f})", flush=True)
