@@ -51,8 +51,12 @@ _oww_model = None
 def _get_oww_model():
     global _oww_model
     if _oww_model is None:
+        import openwakeword as _oww_pkg
+        models_dir = os.path.join(os.path.dirname(_oww_pkg.__file__), "resources", "models")
+        model_path = os.path.join(models_dir, "hey_jarvis_v0.1.onnx")
+        print(f"[wake] Loading model: {model_path}", flush=True)
         from openwakeword.model import Model as OWWModel
-        _oww_model = OWWModel(wakeword_models=[WAKE_WORD], inference_framework="tflite")
+        _oww_model = OWWModel(wakeword_model_paths=[model_path])
     return _oww_model
 
 def wait_for_wake_word():
@@ -72,7 +76,7 @@ def wait_for_wake_word():
         while True:
             chunk = np.frombuffer(stream.read(1280, exception_on_overflow=False), dtype=np.int16)
             prediction = model.predict(chunk)
-            score = prediction.get(WAKE_WORD, 0)
+            score = prediction.get("hey_jarvis_v0.1", 0)
             if score > 0.5:
                 print(f"[wake] Detected (score={score:.2f})", flush=True)
                 break
