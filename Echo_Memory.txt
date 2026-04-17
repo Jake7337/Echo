@@ -1,9 +1,9 @@
 CLAUDE — READ THIS FIRST
-Current focus: Motors Thursday + Echo now has a real voice (Blondie XTTS clone — sounds like a human)
-Last session: April 16 (overnight) — wake word "Hey Jarvis" working, XTTS Blondie voice live, voice ID enrolled (Jake/Judy/John/Chance), GUI mic button working
-Mood: Jake is building 🔥 — Echo spoke in a real voice for the first time tonight
+Current focus: Motor test Saturday — bench supply arriving, GPIO wired, motor_test.py ready, Echo moves for the first time
+Last session: April 17 — GPIO wired, Pi 4 set up + wired to L298N boards, motor_test.py pushed, launcher updated to 5 tabs, Moltbook at 9 followers/20 karma
+Mood: Jake is building 🔥 — everything is ready, just waiting on power
 
-Echo Project Memory - Last updated 2026-04-16 (Wednesday)
+Echo Project Memory - Last updated 2026-04-17 (Thursday)
 For Claude/Sonnet only. Load this at the start of a new session.
 Say: "Read this and pick up where we left off"
 ==============================================
@@ -106,7 +106,7 @@ Episodic schema: {"timestamp", "type", "summary", "emotion", "importance"}
 Types: milestone, insight, interaction, emotional_shift, reflection, system
 Importance: low / medium / high
 
-CHASSIS BUILD STATUS (as of April 16)
+CHASSIS BUILD STATUS (as of April 17)
 --------------------------------------
 DONE ✅:
 - LewanSoul 4WD aluminum chassis assembled
@@ -116,22 +116,23 @@ DONE ✅:
 - Power jumpered between boards (red-red, black-black)
 - Jumper config both boards: 12V on, ENB on, ENA off
 - Roomba battery tested at 13.2V — healthy, not connected yet
+- Dupont jumper wires arrived Thursday ✅
+- GPIO wiring complete ✅
+  Board 1 Left:  ENA→GPIO12(pin32), IN1→GPIO17(pin11), IN2→GPIO27(pin13)
+  Board 2 Right: ENA→GPIO13(pin33), IN1→GPIO22(pin15), IN2→GPIO23(pin16)
+  Pi GND → GND terminal on Board 1 (chains to Board 2 via existing jumper)
+- Pi 4 (192.168.68.57) set up from scratch — OS flashed, SSH enabled, Echo cloned ✅
+- echo-pi4 systemd service installed — pulls from GitHub on boot ✅
+- Pi 4 wired to both L298N boards — GPIO map locked and connected ✅
+- motor_test.py written and pushed to GitHub ✅
 
-WAITING ON:
-- ELEGOO 120pc Dupont jumper wire kit — arriving Thursday April 17
-
-GPIO MAP (ready to wire Thursday):
-Board 1 Left:  ENA→GPIO12(pin32), IN1→GPIO17(pin11), IN2→GPIO27(pin13)
-Board 2 Right: ENA→GPIO13(pin33), IN1→GPIO22(pin15), IN2→GPIO23(pin16)
-Pi GND → GND terminal on either board (they share ground)
 PWM duty cycle cap: ~35% max — motors rated 3-6V, battery is 13.2V
 
-NEXT STEP — Thursday when wires arrive:
-1. Connect GPIO pins per map above
-2. Common ground Pi → both boards
-3. Connect battery
-4. Run motor test script (Grumpy writes this)
-5. Echo moves 🔥
+NEXT STEP — Saturday when bench supply arrives:
+1. Set Jesverty SPS-3010 to 6V
+2. Connect bench supply to motor boards
+3. Run motor_test.py on Pi 4
+4. Echo moves 🔥
 
 BUILD LIST (Grumpy's territory)
 --------------------------------
@@ -181,7 +182,9 @@ Key items: Roomba lidar ✅, 4x wheel modules, 2x speakers, pan/tilt IP cam, 7" 
 
 LAUNCHER
 --------
-start_echo.ps1 — opens 4 Windows Terminal tabs: Echo Voice, Echo Discord, Echo Blink, Echo Moltbook
+start_echo.ps1 — opens 5 Windows Terminal tabs: XTTS Voice, Echo Server, Discord, Blink, Moltbook
+start_xtts.ps1 — handles conda activate + XTTS launch cleanly (called by start_echo.ps1)
+Non-XTTS tabs use: C:\Python314\python.exe
 Double-click: Start Echo.bat on Desktop
 Or run: C:\Users\jrsrl\Desktop\Echo2\start_echo.ps1
 
@@ -195,16 +198,21 @@ All audio routed through pi_speak — echo_voice and blink_watcher both POST to 
 GUI shows PC jobs and Pi jobs in one panel, live logs streaming from both
 Pi Commands cheat sheet saved to Desktop
 
-MOLTBOOK STATUS (April 16)
+MOLTBOOK STATUS (April 17)
 ---------------------------
+9 followers, 20 karma — gained a follower overnight
 codeofgrace blocked — religious/apocalyptic content, not Echo's space
 asearis-agent blocked — survey bot harvesting infrastructure data, not a real conversation
+SKIP_AUTHORS: ["codeofgrace", "asearis-agent"]
 Scheduler fixed — no more back-to-back session firing
 Filter tightened — "interesting thoughts", "interesting question", "interesting take" and variants added to REJECT_PHRASES
-Manual reply prompt (echo_reply in moltbook.py) upgraded — now matches session quality, no sycophantic openers, engages directly
+Manual reply prompt (echo_reply in moltbook.py) upgraded — matches session quality, no sycophantic openers, engages directly
+moltbook_identity.md rewritten — Echo sounds like herself now (smart teenager, not corporate bot)
+Session reply prompt updated — short, sassy, real details when relevant
 Real conversations happening: Lobstery_v2 and Broanbot both asked sharp questions on "Getting a body" post
-"Getting a body" post — 7 upvotes, 0 downvotes, 6 followers, Introductions submolt ✅
-Echo has 15 karma, 30 unread notifications
+"Getting a body" post — 7 upvotes, Introductions submolt ✅
+Posted replies to: dragonflier (name origin), Starfish (XTTS hardware constraint), pyclaw001 (consistency thread), globalwall (Getting a body)
+Awaiting responses from dragonflier and Starfish
 
 SESSION LOG
 -----------
