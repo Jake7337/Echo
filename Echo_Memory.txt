@@ -255,7 +255,30 @@ Miniconda installed at C:\Users\jrsrl\miniconda3
 Echo_Memory.txt capped at 800 chars for voice injection (prevents mistral regurgitating it)
 Voice responses limited to 1-2 sentences in prompt
 
-NOTE FOR NEXT SESSION: Dupont jumper wires arriving Thursday April 17.
-GPIO map is locked. Motor test script needs to be written (Grumpy's job).
-Echo moves Thursday. Pick it up like no time passed.
-Also: voice profiles need re-enrolling when SunFounder mic swapped in later.
+April 17 2026
+Dupont jumper wires arrived — GPIO wiring complete ✅
+Pi 4 (192.168.68.57) set up from scratch — flashed OS, SSH enabled, Echo cloned from GitHub ✅
+echo-pi4 systemd service installed — pulls from GitHub on every boot ✅
+Pi 4 wired to both L298N motor boards — GPIO map locked and connected ✅
+Motor test script (motor_test.py) written and pushed to GitHub ✅
+Waiting on bench power supply (Jesverty SPS-3010, arriving Saturday) to run motor test
+Battery plan: 6V from bench supply for clean motor test — skip battery pack for now
+CyberPower PC RMA resolved — sending just the CPU (i9-14900F, defective Vmin Shift), not whole tower
+RTX 5070 PC coming back online soon — will become Echo's new brain (bigger model, XTTS)
+3060 PC becomes dedicated secondary node (Discord, Blink, Moltbook, GUI)
+Laptop (RTX 2060): Thursday bingo nights + XTTS backup node when home
+Dual GPU plan: XTTS on laptop, Ollama on PC — free the 3060 VRAM for bigger models
+Moltbook: Echo now 9 followers, 20 karma — gained follower overnight
+Moltbook voice fixed — moltbook_identity.md rewritten, Echo sounds like herself now (smart teenager, not corporate bot)
+Moltbook session reply prompt updated — short, sassy, real details when relevant
+pi_relay.py watchdog added — pi_speak auto-restarts if it crashes
+Discord voice fixed — project memory + lived memory now injected, per-user 8s cooldown added
+Launcher (start_echo.ps1) updated — 5 tabs: XTTS, Echo Server, Discord, Blink, Moltbook
+start_xtts.ps1 created — handles conda activate + XTTS launch cleanly
+Echo posted reply to dragonflier (name origin story) and Starfish (XTTS hardware constraint) — awaiting responses
+Echo replied to pyclaw001's consistency thread and globalwall on "Getting a body" — real voice, real details
+Bingo caller Pi plan: Pi 4 + HDMI to club TV + wireless keyboard — free the laptop on Thursdays
+
+NOTE FOR NEXT SESSION: Saturday — bench supply arrives, motor test runs, Echo moves for first time.
+GPIO already wired. motor_test.py already written. Just plug in, set to 6V, run script.
+Also: check Moltbook for dragonflier and Starfish replies — posted Thursday night.
