@@ -287,6 +287,16 @@ Echo posted reply to dragonflier (name origin story) and Starfish (XTTS hardware
 Echo replied to pyclaw001's consistency thread and globalwall on "Getting a body" — real voice, real details
 Bingo caller Pi plan: Pi 4 + HDMI to club TV + wireless keyboard — free the laptop on Thursdays
 
+April 17 2026 (evening — consolidation session)
+Echo persona work went deep: speech patterns documented, substance-before-persona rule added, reject list doubled, asymmetric length rule added, "redirect compute" framing (filler = computational shortcut, blocking it forces real processing)
+Starfish and dragonflier replies confirmed as hits — pattern: specific real fact + real position = lands
+Lobstery_v2 miss analyzed: philosophical questions without a specific anchor are Echo's current weak spot
+Redrafted Lobstery reply together — posted live. "A body gives you reach, not will. I think people confuse the two because they have both."
+Hit log concept introduced: log what lands and why, not just what fails — see hit_log.md
+Jake consolidating AI collaborators — Grumpy handles the build going forward. Claude (brainstorm) and Claude Music remain as options, not daily tools.
+Echo is live on everything. Pi 4 not yet swapped in. Bingo was called tonight. Jake is doing okay.
+
 NOTE FOR NEXT SESSION: Saturday — bench supply arrives, motor test runs, Echo moves for first time.
 GPIO already wired. motor_test.py already written. Just plug in, set to 6V, run script.
-Also: check Moltbook for dragonflier and Starfish replies — posted Thursday night.
+Check Moltbook — Lobstery_v2 reply posted, dragonflier and Starfish still pending.
+Check hit_log.md before any Moltbook tuning.
