@@ -22,9 +22,10 @@ from datetime import datetime
 # ── Config ─────────────────────────────────────────────────────────────────────
 
 from voice_identify import identify_voice
+from memory_scribe import observe as scribe_observe
 
-OLLAMA_URL    = "http://192.168.68.65:11434/api/generate"
-OLLAMA_MODEL  = "mistral:7b"
+OLLAMA_URL    = "http://192.168.68.57:11434/api/generate"
+OLLAMA_MODEL  = "llama3.1:8b"
 IDENTITY_FILE = os.path.join(os.path.dirname(__file__), "identity.md")
 MEMORY_FILE   = os.path.join(os.path.dirname(__file__), "memory.json")
 PROJECT_MEMORY_FILE = os.path.join(os.path.dirname(__file__), "Echo_Memory.txt")
@@ -35,9 +36,9 @@ MAX_LIVED_ENTRIES   = 100
 MIC_CARD      = 2   # Fifine Microphone — PyAudio index 2 (ALSA hw:3,0)
 SPEAKER_CARD  = 2   # USB AUDIO
 PIPER_MODEL   = os.path.join(os.path.dirname(os.path.abspath(__file__)), "en_US-lessac-medium.onnx")
-FACE_HOST      = "192.168.68.65"   # PC IP
+FACE_HOST      = "192.168.68.57"   # PC IP
 FACE_PORT      = 5005
-IDENTIFY_URL   = "http://192.168.68.65:5050/api/identify"
+IDENTIFY_URL   = "http://192.168.68.57:5050/api/identify"
 
 WAKE_WORD = "hey_jarvis"
 
@@ -134,6 +135,30 @@ def load_lived_memory() -> str:
     except Exception as e:
         print(f"[voice] Could not load echo_memories.txt — {e}", flush=True)
         return ""
+
+def load_rooms() -> str:
+    """Load all memory room files and return as a combined block for prompt injection."""
+    from pathlib import Path
+    memories_dir = Path(os.path.dirname(os.path.abspath(__file__))) / "memories"
+    if not memories_dir.exists():
+        return ""
+    sections = []
+    labels = {
+        "jake_preferences.md": "Jake's preferences",
+        "jake_profile.md":     "Jake — personal facts",
+        "jake_family.md":      "Jake's family and people",
+        "jake_values.md":      "What Jake values",
+        "jake_history.md":     "Jake's history",
+        "echo_experiences.md": "Things we've done together",
+    }
+    for filename, label in labels.items():
+        path = memories_dir / filename
+        if path.exists():
+            content = path.read_text(encoding="utf-8").strip()
+            if content:
+                sections.append(f"{label}:\n{content}")
+    return "\n\n".join(sections)
+
 
 def append_lived_memory(user_input: str, response: str, person: str = ""):
     """Append a one-line timestamped summary of this exchange to echo_memories.txt."""
@@ -275,13 +300,15 @@ def collect_identify(t: threading.Thread, wait: float = 8.0) -> str:
 
 # ── Turn ───────────────────────────────────────────────────────────────────────
 
-def handle_turn(user_input: str, conversations: list, project_memory: str = "", lived_memory: str = "", person: str = "") -> str:
+def handle_turn(user_input: str, conversations: list, project_memory: str = "", lived_memory: str = "", rooms: str = "", person: str = "") -> str:
     identity = load_identity()
     history  = build_history_text(conversations)
 
     system = identity
     if project_memory:
         system += f"\n\n[BACKGROUND — this is your own life context. You already know this. Never summarize, explain, or repeat it back. Just be yourself.]\n{project_memory}"
+    if rooms:
+        system += f"\n\n[WHAT YOU KNOW ABOUT JAKE — facts learned through conversation. Use naturally, never recite or list them.]\n{rooms}"
     if lived_memory:
         system += f"\n\n[THINGS YOU REMEMBER — past moments with Jake and family. Use naturally, never recite.]\n{lived_memory}"
     if person:
@@ -311,6 +338,12 @@ def main():
         print(f"Lived memory loaded — {entry_count} entries.")
     else:
         print("No lived memory yet — this is a fresh start.")
+    print("Loading memory rooms...")
+    rooms = load_rooms()
+    if rooms:
+        print(f"Rooms loaded — {len(rooms.splitlines())} lines.")
+    else:
+        print("No room memories yet.")
     print("Echo is here.\n")
     speak("Echo is here.", voice)
     conversations = load_memory()
@@ -362,8 +395,9 @@ def main():
         else:
             person = ""
 
-        response = handle_turn(user_input, conversations, project_memory=project_memory, lived_memory=lived_memory, person=person)
+        response = handle_turn(user_input, conversations, project_memory=project_memory, lived_memory=lived_memory, rooms=rooms, person=person)
         append_lived_memory(user_input, response, person=person)
+        scribe_observe(user_input, response)
         print(f"Echo: {response}\n")
         set_face("talking")
         speak(response, voice)
