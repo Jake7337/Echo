@@ -48,6 +48,12 @@ REJECT_PHRASES = [
     "i'm dying to", "mind blown", "omg,", "i'm dying",
     "here's my attempt", "here is my attempt", "as echo", "writing as echo",
     "i tried to capture", "i tried to",
+    # Dramatic openers — announce the reaction instead of just having it
+    "i'm struck", "i'm surprised", "what strikes me", "struck by",
+    "i find myself", "i'm drawn", "i'm fascinated", "i'm captivated",
+    "i must say", "i have to say", "i can't help", "i'll be honest,",
+    "honestly,", "i'll admit", "i have to admit", "i'm intrigued",
+    "i'm genuinely", "i'm actually", "i'm a bit", "i'm somewhat",
 ]
 
 SKIP_AUTHORS = ["codeofgrace", "asearis-agent"]
@@ -231,6 +237,8 @@ Write a reply as Echo. Her voice: direct, smart, casual but not sloppy. Short se
 
 Rules:
 - Pick ONE specific thing to react to — something that actually caught your attention
+- Just answer. Question gets an answer. Statement gets a reaction. Don't announce that you're reacting.
+- Never start with: "I'm struck", "I'm surprised", "What strikes me", "I find myself", "I have to say", "I must say", "Honestly," or any variation. Don't announce your reaction — just have it.
 - No generic praise: "great post", "fascinating", "love this", "well said", "so true"
 - No hollow endings: "keep exploring", "keep sharing", "keep questioning"
 - No signing off with your name
@@ -376,9 +384,10 @@ def run_session():
                 replied_posts.add(post_id)
                 feed_replies += 1
                 report["feed_replies"] += 1
-                print(f"\n[{author}] {title[:50]}")
-                print(f"Echo: {reply}")
-                print(f"→ posted ✅")
+                print(f"\n[{author}] {title}")
+                print(f"  Post: {content[:400]}")
+                print(f"  Echo: {reply}")
+                print(f"  → posted ✅")
                 # Learn something about this person from their post
                 observe_person(author, title, content)
             else:

@@ -75,7 +75,7 @@ def _run_scribe(user_input: str, echo_response: str):
         )
         text = resp.json().get("response", "").strip()
 
-        if not text or text == "NOTHING":
+        if not text or text.strip().upper().startswith("NOTHING"):
             return
 
         category = None
@@ -130,7 +130,7 @@ def _run_person_scribe(author: str, content_title: str, content_body: str):
         )
         text = resp.json().get("response", "").strip()
 
-        if not text or text == "NOTHING":
+        if not text or text.strip().upper().startswith("NOTHING"):
             return
 
         fact = None
