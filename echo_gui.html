@@ -323,8 +323,8 @@
 
   #btn-mic {
     background: transparent;
-    border: 1px solid var(--dim);
-    color: var(--dim);
+    border: 1px solid var(--pink);
+    color: var(--pink);
     font-size: 1rem;
     padding: 4px 8px;
     border-radius: 6px;
@@ -332,7 +332,8 @@
     transition: all 0.2s;
     line-height: 1;
   }
-  #btn-mic.active { border-color: #ff2244; color: #ff2244; box-shadow: 0 0 10px rgba(255,34,68,0.4); }
+  #btn-mic:hover { box-shadow: 0 0 8px rgba(255,0,255,0.4); }
+  #btn-mic.active { border-color: #ff2244; color: #ff2244; box-shadow: 0 0 10px rgba(255,34,68,0.4); animation: pulse 0.8s ease-in-out infinite; }
 
   /* ── Moltbook panel ──────────────────────────────────────────── */
 
@@ -461,6 +462,7 @@
   <div id="molt-controls">
     <button class="btn-action" onclick="refreshMoltbook()">Refresh</button>
     <button class="btn-action" onclick="runMoltbookSession()">Run Session Now</button>
+    <button class="btn-action" id="btn-backup" onclick="backupMemory(this)">Back Up Memories</button>
   </div>
   <div id="molt-notifs"><div style="color:var(--dim);font-size:0.6rem;">Loading notifications...</div></div>
 </div>
@@ -675,6 +677,7 @@ function toggleMic() {
     recognition && recognition.stop();
     micActive = false;
     document.getElementById("btn-mic").classList.remove("active");
+    document.getElementById("chat-input").placeholder = "Talk to Echo...";
   } else {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     recognition = new SR();
@@ -686,13 +689,26 @@ function toggleMic() {
       document.getElementById("chat-input").value = transcript;
       sendChat();
     };
-    recognition.onend = () => {
+    recognition.onerror = (e) => {
+      if (e.error === "no-speech") return; // ignore silence, keep going
+      addChatMessage("echo","Echo",`Mic error: ${e.error}`);
       micActive = false;
       document.getElementById("btn-mic").classList.remove("active");
+      document.getElementById("chat-input").placeholder = "Talk to Echo...";
+    };
+    recognition.onend = () => {
+      if (micActive) {
+        // auto-restart so you don't have to click again
+        recognition.start();
+        document.getElementById("chat-input").placeholder = "Listening...";
+      } else {
+        document.getElementById("chat-input").placeholder = "Talk to Echo...";
+      }
     };
     recognition.start();
     micActive = true;
     document.getElementById("btn-mic").classList.add("active");
+    document.getElementById("chat-input").placeholder = "Listening...";
   }
 }
 
@@ -725,6 +741,21 @@ async function refreshMoltbook() {
 async function runMoltbookSession() {
   await fetch("http://localhost:5050/api/moltbook/session", {method:"POST"});
   appendLog("moltbook", "Manual session triggered", new Date().toLocaleTimeString("en-US",{hour12:false,hour:"2-digit",minute:"2-digit",second:"2-digit"}));
+}
+
+async function backupMemory(btn) {
+  const original = btn.textContent;
+  btn.textContent = "Backing up...";
+  btn.disabled = true;
+  try {
+    const resp = await fetch("http://localhost:5050/api/memory/backup", {method:"POST"});
+    const data = await resp.json();
+    btn.textContent = data.status;
+    appendLog("moltbook", `[memory] ${data.status}`, new Date().toLocaleTimeString("en-US",{hour12:false,hour:"2-digit",minute:"2-digit",second:"2-digit"}));
+  } catch(e) {
+    btn.textContent = "error";
+  }
+  setTimeout(() => { btn.textContent = original; btn.disabled = false; }, 4000);
 }
 
 // ── Face canvas ────────────────────────────────────────────────────────────

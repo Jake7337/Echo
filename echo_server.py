@@ -15,7 +15,7 @@ import subprocess
 import threading
 import requests
 from datetime import datetime
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_from_directory
 from flask_socketio import SocketIO
 from flask_cors import CORS
 
@@ -26,7 +26,7 @@ IDENTITY_FILE = os.path.join(BASE_DIR, "identity.md")
 ECHO_MEM_DIR  = os.path.join(BASE_DIR, "memory")
 EMOTION_FILE  = os.path.join(ECHO_MEM_DIR, "emotional_state.json")
 OLLAMA_URL    = "http://localhost:11434/api/generate"
-OLLAMA_MODEL  = "mistral:7b"
+OLLAMA_MODEL  = "llama3.1:8b"
 MOLTBOOK_URL  = "https://www.moltbook.com/api/v1"
 
 app = Flask(__name__)
@@ -98,6 +98,13 @@ def stop_job(job_id: str):
     job["proc"]   = None
     job["status"] = "stopped"
     sio.emit("job_status", {"job": job_id, "status": "stopped"})
+
+
+# ── GUI route ──────────────────────────────────────────────────────────────
+
+@app.route("/")
+def serve_gui():
+    return send_from_directory(BASE_DIR, "echo_gui.html")
 
 
 # ── Job routes ─────────────────────────────────────────────────────────────
@@ -188,6 +195,9 @@ def api_chat():
                 break
             output.append(line)
         reply = "\n".join(output).strip()
+        # Strip any leaked emotional state tags
+        import re
+        reply = re.sub(r"<[^>]+>", "", reply).strip()
     except Exception as e:
         reply = f"(Echo couldn't respond — {e})"
 
@@ -284,6 +294,35 @@ def api_moltbook_session():
     t = threading.Thread(target=_run, daemon=True)
     t.start()
     return jsonify({"status": "session started"})
+
+
+# ── Memory backup route ───────────────────────────────────────────────────
+
+@app.route("/api/memory/backup", methods=["POST"])
+def api_memory_backup():
+    """Git add → commit → push the memories folder."""
+    try:
+        ts = datetime.now().strftime("%Y-%m-%d %H:%M")
+        subprocess.run(
+            ["git", "-C", BASE_DIR, "add", "memories/"],
+            capture_output=True, timeout=30
+        )
+        commit = subprocess.run(
+            ["git", "-C", BASE_DIR, "commit", "-m", f"memory backup {ts}"],
+            capture_output=True, text=True, timeout=30
+        )
+        if "nothing to commit" in commit.stdout or "nothing to commit" in commit.stderr:
+            return jsonify({"status": "nothing new to back up"})
+        push = subprocess.run(
+            ["git", "-C", BASE_DIR, "push"],
+            capture_output=True, text=True, timeout=60
+        )
+        if push.returncode == 0:
+            return jsonify({"status": "backed up ✓"})
+        else:
+            return jsonify({"status": f"push failed — {push.stderr.strip()}"}), 500
+    except Exception as e:
+        return jsonify({"status": f"error — {e}"}), 500
 
 
 # ── Echo state route ───────────────────────────────────────────────────────

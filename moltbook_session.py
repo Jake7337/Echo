@@ -25,6 +25,7 @@ CREDS_FILE   = os.path.join(os.path.dirname(__file__), "moltbook_creds.json")
 IDENTITY_FILE = os.path.join(os.path.dirname(__file__), "moltbook_identity.md")
 REPLIED_FILE  = os.path.join(os.path.dirname(__file__), "moltbook_replied.json")
 POST_TRACKER  = os.path.join(os.path.dirname(__file__), "moltbook_posted.json")
+PUSH_TRACKER  = os.path.join(os.path.dirname(__file__), "moltbook_pushed.json")
 PROJECT_MEMORY_FILE = os.path.join(os.path.dirname(__file__), "Echo_Memory.txt")
 
 MAX_FEED_REPLIES    = 5   # replies to other people's posts per session
@@ -109,6 +110,50 @@ def mark_posted_today():
     today = datetime.now().strftime("%Y-%m-%d")
     with open(POST_TRACKER, "w") as f:
         json.dump({"last_post_date": today}, f)
+
+# ── Daily memory backup ────────────────────────────────────────────────────────
+
+def has_pushed_today() -> bool:
+    today = datetime.now().strftime("%Y-%m-%d")
+    try:
+        with open(PUSH_TRACKER) as f:
+            data = json.load(f)
+        return data.get("last_push_date") == today
+    except Exception:
+        return False
+
+def mark_pushed_today():
+    today = datetime.now().strftime("%Y-%m-%d")
+    with open(PUSH_TRACKER, "w") as f:
+        json.dump({"last_push_date": today}, f)
+
+def push_memories():
+    """Git add → commit → push the memories folder. Returns True on success."""
+    import subprocess
+    base = os.path.dirname(os.path.abspath(__file__))
+    ts   = datetime.now().strftime("%Y-%m-%d %H:%M")
+    try:
+        subprocess.run(["git", "-C", base, "add", "memories/"], capture_output=True, timeout=30)
+        commit = subprocess.run(
+            ["git", "-C", base, "commit", "-m", f"memory backup {ts}"],
+            capture_output=True, text=True, timeout=30
+        )
+        if "nothing to commit" in commit.stdout or "nothing to commit" in commit.stderr:
+            print("[memory] Nothing new to push.")
+            return True
+        push = subprocess.run(
+            ["git", "-C", base, "push"],
+            capture_output=True, text=True, timeout=60
+        )
+        if push.returncode == 0:
+            print(f"[memory] Memories pushed to GitHub ✓")
+            return True
+        else:
+            print(f"[memory] Push failed — {push.stderr.strip()}")
+            return False
+    except Exception as e:
+        print(f"[memory] Push error — {e}")
+        return False
 
 # ── Original post generation ────────────────────────────────────────────────────
 
@@ -465,6 +510,12 @@ def run_session():
     print(f"  Skipped          : {report['skipped']}")
     print(f"  Rejected         : {report['rejected']}")
     print(f"{'─'*50}\n")
+
+    # Daily memory backup — once per day, at first session
+    if not has_pushed_today():
+        print("Running daily memory backup...")
+        if push_memories():
+            mark_pushed_today()
 
 
 # ── Scheduler ──────────────────────────────────────────────────────────────────
