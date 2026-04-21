@@ -86,8 +86,8 @@
     line-height: 1;
   }
   #btn-fullscreen:hover { border-color: var(--cyan); color: var(--cyan); }
-  #chat     { grid-column: 1; grid-row: 3; }
-  #molt     { grid-column: 3; grid-row: 3; }
+  #chat     { grid-column: 1; grid-row: 2 / span 2; }
+  #molt     { grid-column: 3; grid-row: 2 / span 2; }
 
   /* ── Jobs panel ──────────────────────────────────────────────── */
 
@@ -458,6 +458,14 @@
       <div class="stat-val" id="stat-followers">—</div>
       <div class="stat-lbl">Followers</div>
     </div>
+    <div class="stat-box">
+      <div class="stat-val" id="stat-following">—</div>
+      <div class="stat-lbl">Following</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-val" id="stat-posts">—</div>
+      <div class="stat-lbl">Posts</div>
+    </div>
   </div>
   <div id="molt-controls">
     <button class="btn-action" onclick="refreshMoltbook()">Refresh</button>
@@ -719,6 +727,8 @@ async function refreshMoltbook() {
     const data = await resp.json();
     document.getElementById("stat-karma").textContent     = data.karma     ?? "—";
     document.getElementById("stat-followers").textContent = data.followers  ?? "—";
+    document.getElementById("stat-following").textContent = data.following  ?? "—";
+    document.getElementById("stat-posts").textContent     = data.posts      ?? "—";
 
     const notifEl = document.getElementById("molt-notifs");
     notifEl.innerHTML = "";

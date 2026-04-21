@@ -9,11 +9,13 @@ Run on Pi: python pi_speak.py
 
 import subprocess
 import requests
+import random
 from flask import Flask, request, jsonify
 
-XTTS_URL     = "http://192.168.68.65:5200/tts_to_audio/"
-SPEAKER_WAV  = "1"   # voice sample to use from Echos voice folder
+XTTS_URL     = "http://192.168.68.80:5200/tts_to_audio/"
 APLAY_DEVICE = "plughw:2,0"  # USB speakers — card 2
+
+SPEAKER_WAVS = [f"echo_{i:03d}" for i in range(1, 83)]
 
 app = Flask(__name__)
 print("Pi speak server ready (XTTS voice).")
@@ -29,11 +31,12 @@ def speak():
     # Truncate long responses — XTTS times out on walls of text
     if len(text) > 400:
         text = text[:400].rsplit(" ", 1)[0] + "..."
+    speaker = random.choice(SPEAKER_WAVS)
     print(f"Speaking: {text}")
     try:
         resp = requests.post(
             XTTS_URL,
-            json={"text": text, "speaker_wav": SPEAKER_WAV, "language": "en"},
+            json={"text": text, "speaker_wav": speaker, "language": "en"},
             timeout=60,
         )
         resp.raise_for_status()

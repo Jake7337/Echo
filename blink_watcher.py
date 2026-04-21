@@ -20,6 +20,7 @@ import requests
 from datetime import datetime
 from blinkpy.blinkpy import Blink
 from blinkpy.auth import Auth
+from blink_capture import capture_event, cleanup_cache
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
@@ -289,8 +290,12 @@ async def watch(blink: Blink):
                 threading.Thread(target=handle_desk_motion, args=(last_greeted,), daemon=True).start()
                 continue
 
-            # Outdoor camera — cv_detection + filter
-            cv, description = await get_camera_event(blink, name)
+            # Stage 1 — capture everything locally before URLs expire
+            event = await capture_event(blink, name, thumbnail_url=new_thumb)
+
+            # Stage 2 — filter and announce using stable local data
+            cv          = event.get("cv_detection", [])
+            description = event.get("description", "")
             print(f"[{name}] cv={cv} description={repr(description)}", flush=True)
             announce, text = should_announce(name, cv, description, last_announced, cfg)
 
@@ -300,6 +305,10 @@ async def watch(blink: Blink):
                 print(f"[{name}] → announced: {text}", flush=True)
             else:
                 print(f"[{name}] → skipped ({text})", flush=True)
+
+        # Daily cache cleanup — runs once per hour (every 120 polls at 30s)
+        if int(time.time()) % 3600 < POLL_SECONDS:
+            cleanup_cache()
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 

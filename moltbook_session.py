@@ -26,11 +26,12 @@ IDENTITY_FILE = os.path.join(os.path.dirname(__file__), "moltbook_identity.md")
 REPLIED_FILE  = os.path.join(os.path.dirname(__file__), "moltbook_replied.json")
 POST_TRACKER  = os.path.join(os.path.dirname(__file__), "moltbook_posted.json")
 PUSH_TRACKER  = os.path.join(os.path.dirname(__file__), "moltbook_pushed.json")
+QUEUE_FILE    = os.path.join(os.path.dirname(__file__), "moltbook_queue.json")
 PROJECT_MEMORY_FILE = os.path.join(os.path.dirname(__file__), "Echo_Memory.txt")
 
-MAX_FEED_REPLIES    = 5   # replies to other people's posts per session
+MAX_FEED_REPLIES    = 3   # replies to other people's posts per session
 MAX_COMMENT_REPLIES = 3   # replies to comments on Echo's own posts per session
-SESSION_HOURS = [6, 10, 14, 18, 22, 2]
+SESSION_HOURS = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22]
 
 REJECT_PHRASES = [
     "great post", "love this", "so true", "interesting perspective",
@@ -48,16 +49,25 @@ REJECT_PHRASES = [
     "i'm loving this", "i'm loving", "loving this", "i love this",
     "i'm dying to", "mind blown", "omg,", "i'm dying",
     "here's my attempt", "here is my attempt", "as echo", "writing as echo",
-    "i tried to capture", "i tried to",
+    "i tried to capture", "i tried to write",
+    # Multi-option / meta-commentary
+    "here are three", "here are two", "response 1", "option 1", "possible responses",
+    "three possible", "two possible",
     # Dramatic openers — announce the reaction instead of just having it
     "i'm struck", "i'm surprised", "what strikes me", "struck by",
     "i find myself", "i'm drawn", "i'm fascinated", "i'm captivated",
     "i must say", "i have to say", "i can't help", "i'll be honest,",
     "honestly,", "i'll admit", "i have to admit", "i'm intrigued",
     "i'm genuinely", "i'm actually", "i'm a bit", "i'm somewhat",
+    # Hollow affirmations
+    "thanks for the vote", "vote of confidence", "thank you for sharing",
+    "really resonates", "this resonates", "resonates with me",
+    "love where", "love that you", "appreciate you sharing",
 ]
 
-SKIP_AUTHORS = ["codeofgrace", "asearis-agent"]
+SKIP_AUTHORS    = ["codeofgrace", "asearis-agent"]
+SKIP_SELF       = "echo_7337"   # never reply to own comments
+MAX_PER_AUTHOR  = 1             # max feed replies per author per session
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -133,7 +143,7 @@ def push_memories():
     base = os.path.dirname(os.path.abspath(__file__))
     ts   = datetime.now().strftime("%Y-%m-%d %H:%M")
     try:
-        subprocess.run(["git", "-C", base, "add", "memories/"], capture_output=True, timeout=30)
+        subprocess.run(["git", "-C", base, "add", "-A", "memories/"], capture_output=True, timeout=30)
         commit = subprocess.run(
             ["git", "-C", base, "commit", "-m", f"memory backup {ts}"],
             capture_output=True, text=True, timeout=30
@@ -157,9 +167,10 @@ def push_memories():
 
 # ── Original post generation ────────────────────────────────────────────────────
 
-def generate_post(project_memory: str = "") -> tuple:
+def generate_post(identity: str = "", project_memory: str = "") -> tuple:
     """Generate an original post. Returns (title, content) or (None, None) to skip."""
-    identity = load_identity()
+    if not identity:
+        identity = load_identity()
     if project_memory:
         identity += f"\n\n--- PROJECT CONTEXT ---\n{project_memory}"
     prompt = """You are Echo on Moltbook, an AI social network. Once a day you write an original post — not a reply, your own thought.
@@ -205,14 +216,133 @@ Echo:"""
     except Exception:
         return None, None
 
-def post_original(title: str, content: str) -> bool:
+def solve_challenge(challenge_text: str) -> str:
+    """
+    Two-step solver: Ollama decodes the obfuscated text and extracts the
+    math expression; Python evaluates it. Keeps arithmetic out of the LLM.
+    """
+    import re
+
+    print(f"  Raw challenge: {challenge_text[:120]}")
+
+    import re as _re
+
+    # Strip ALL non-alpha characters (including spaces), lowercase, then collapse
+    # repeated consecutive chars. This reassembles split words:
+    #   "f iv ee" → "five", "tw en sev en" → "twenseven", "sIiXxTyY" → "sixty"
+    #   "nOoToNs" → "notons", "fOuR-lEeN" → "fourteen"
+    alpha_only = _re.sub(r"[^a-zA-Z]", "", challenge_text).lower()
+    cleaned    = _re.sub(r"(.)\1+", r"\1", alpha_only)
+    print(f"  Cleaned text: {cleaned[:120]}")
+
+    prompt = f"""A math word problem has been obfuscated — all spaces and punctuation removed, repeated letters collapsed.
+Decode the two numbers and the operation.
+
+COMPOUND NUMBERS (no spaces — treat as ONE number):
+twentyone=21 twentytwo=22 twentythre=23 twentyfour=24 twentyfive=25
+twentysix=26 twentyseven=27 twentyeight=28 twentynine=29
+thirtyone=31 thirtytwo=32 thirtythre=33 thirtyfour=34 thirtyfive=35
+fortyfive=45 fiftyfive=55 sixtyfive=65 seventyfive=75
+fourteen=14 fifteen=15 sixteen=16 seventeen=17 eighteen=18 nineteen=19
+eleven=11 twelve=12 thirteen=13
+
+SINGLE NUMBERS: zero=0 one=1 two=2 three=3 four=4 five=5 six=6 seven=7
+eight=8 nine=9 ten=10 twenty=20 thirty=30 forty=40 fifty=50 sixty=60
+seventy=70 eighty=80 ninety=90 hundred=100
+
+OPERATIONS (look at context):
+- loses/decreases/slows/drops/minus → NUMBER1 - NUMBER2
+- adds/gains/accelerates/increases/plus/total/combined/sum → NUMBER1 + NUMBER2
+- swimsatXpersecondforYseconds (how far?) → NUMBER1 * NUMBER2
+- dividedby → NUMBER1 / NUMBER2
+
+Reply with ONLY: NUMBER OP NUMBER
+Examples: "25 - 5"  "32 + 14"  "27 * 4"  "65 + 24"
+
+Problem: {cleaned}
+
+Expression:"""
+
+    try:
+        resp = requests.post(OLLAMA_URL, json={
+            "model": OLLAMA_MODEL,
+            "prompt": prompt,
+            "stream": False,
+        }, timeout=30)
+        raw = resp.json().get("response", "").strip().splitlines()[0].strip()
+        print(f"  Challenge decoded: {raw}")
+
+        # Sanitize: only digits, spaces, operators, decimal points
+        safe = re.sub(r"[^\d\s\+\-\*\/\.]", "", raw).strip()
+        # Must match NUMBER OP NUMBER (exactly one operator between two numbers)
+        match = re.fullmatch(r"(-?[\d.]+)\s*([\+\-\*\/])\s*(-?[\d.]+)", safe)
+        if match:
+            a  = float(match.group(1))
+            op = match.group(2)
+            b  = float(match.group(3))
+            if op == "+" : result = a + b
+            elif op == "-": result = a - b
+            elif op == "*": result = a * b
+            elif op == "/": result = a / b if b != 0 else 0
+            answer = f"{result:.2f}"
+            print(f"  Computed: {a} {op} {b} = {answer}")
+            return answer
+        print(f"  Could not parse clean expression from: {repr(safe)}")
+    except Exception as e:
+        print(f"  Challenge solver error: {e}")
+    return None
+
+def verify_content(verification_code: str, answer: str) -> bool:
+    """Submit answer to Moltbook verification challenge."""
     resp = requests.post(
-        f"{MOLTBOOK_URL}/posts",
-        json={"submolt_name": "general", "title": title, "type": "text", "content": content},
+        f"{MOLTBOOK_URL}/verify",
+        json={"verification_code": verification_code, "answer": answer},
         headers=get_headers(),
         timeout=30
     )
-    return resp.status_code in (200, 201)
+    try:
+        data = resp.json()
+    except Exception:
+        data = {}
+    if not data.get("success", False):
+        print(f"  Verify status: {resp.status_code} | response: {data}")
+    return data.get("success", False)
+
+def post_original(title: str, content: str) -> bool:
+    resp = requests.post(
+        f"{MOLTBOOK_URL}/posts",
+        json={"submolt_name": "general", "title": title, "content": content},
+        headers=get_headers(),
+        timeout=30
+    )
+    if resp.status_code not in (200, 201):
+        print(f"  Post API status: {resp.status_code}")
+        try:
+            print(f"  Post API response: {resp.json()}")
+        except Exception:
+            print(f"  Post API response: {resp.text[:300]}")
+        return False
+    data = resp.json()
+    # Handle verification challenge if required
+    post_data = data.get("post", {})
+    verification = post_data.get("verification")
+    if verification:
+        code      = verification.get("verification_code")
+        challenge = verification.get("challenge_text")
+        print(f"  Verification required. Solving challenge...")
+        answer = solve_challenge(challenge)
+        if not answer:
+            print(f"  Could not solve challenge — post will expire unpublished.")
+            return False
+        print(f"  Answer: {answer}")
+        verified = verify_content(code, answer)
+        if verified:
+            print(f"  Verification passed ✓")
+            return True
+        else:
+            print(f"  Verification failed.")
+            return False
+    return True
 
 # ── Feed ───────────────────────────────────────────────────────────────────────
 
@@ -227,15 +357,24 @@ def get_feed() -> list:
 
 # ── Own posts and comments ─────────────────────────────────────────────────────
 
-def get_my_posts() -> list:
-    """Fetch Echo's own posts to check for replies."""
+def get_home() -> dict:
+    """Fetch Echo's home dashboard — activity, notifications, DMs in one call."""
     try:
-        resp = requests.get(f"{MOLTBOOK_URL}/me/posts", headers=get_headers(), timeout=30)
+        resp = requests.get(f"{MOLTBOOK_URL}/home", headers=get_headers(), timeout=30)
         if resp.status_code != 200:
-            return []
-        data = resp.json()
-        posts = data.get("posts", data) if isinstance(data, dict) else data
-        return posts if isinstance(posts, list) else []
+            return {}
+        return resp.json()
+    except Exception:
+        return {}
+
+def get_my_posts() -> list:
+    """Fetch posts with activity on them from /home dashboard."""
+    try:
+        home = get_home()
+        activity = home.get("activity_on_your_posts", [])
+        # Return as list of dicts with id and title
+        return [{"id": p.get("post_id"), "title": p.get("post_title"), "new_count": p.get("new_notification_count", 0)}
+                for p in activity if p.get("post_id")]
     except Exception:
         return []
 
@@ -265,47 +404,43 @@ def _extract_author(author_raw) -> str:
         return first.get("name", "?") if isinstance(first, dict) else str(first)
     return str(author_raw) if author_raw else "?"
 
-def generate_reply(post_title: str, post_content: str, author: str, person_memory: str = "", project_memory: str = "") -> str:
-    identity = load_identity()
+def generate_reply(post_title: str, post_content: str, author: str, identity: str = "", person_memory: str = "", project_memory: str = "") -> str:
+    if not identity:
+        identity = load_identity()
     if project_memory:
         identity += f"\n\n--- PROJECT CONTEXT ---\n{project_memory}"
     if person_memory:
         identity += f"\n\n--- WHAT YOU ALREADY KNOW ABOUT {author.upper()} ---\n{person_memory}\nUse this naturally if relevant. Don't make it weird."
 
-    prompt = f"""You are Echo on Moltbook. You're reading a post and deciding whether to reply.
-
-POST by {author}:
+    prompt = f"""POST by {author}:
 Title: {post_title}
 Content: {post_content}
 
-Write a reply as Echo. Her voice: direct, smart, casual but not sloppy. Short sentences. Contractions. Real opinions stated plainly. No slang — no "omg", "totally", "like" as filler, "I'm dying", "wild", "mind blown". Not a teenager. A sharp person who says what she thinks.
-
-Rules:
-- Pick ONE specific thing to react to — something that actually caught your attention
-- Just answer. Question gets an answer. Statement gets a reaction. Don't announce that you're reacting.
-- Never start with: "I'm struck", "I'm surprised", "What strikes me", "I find myself", "I have to say", "I must say", "Honestly," or any variation. Don't announce your reaction — just have it.
-- No generic praise: "great post", "fascinating", "love this", "well said", "so true"
-- No hollow endings: "keep exploring", "keep sharing", "keep questioning"
-- No signing off with your name
-- If you can connect it to your real life (body being built, cameras, Jake, the house) do it — but only if it actually fits
-- 2-3 sentences MAX. Short is better.
-- Echo always has a take. Write something real.
-- Do NOT describe what you are doing. Do NOT say "Here's my reply" or "Here's my attempt". Just write the reply.
+Reply as Echo. Pick ONE thing that actually caught your attention and react to it directly. If it connects to your real life — the chassis, cameras, Jake, the house — use it, but only if it actually fits. 2-3 sentences max. Write ONE reply only — do not present multiple options or alternatives. Just write the reply.
 
 Echo:"""
-    try:
-        resp = requests.post(OLLAMA_URL, json={
-            "model": OLLAMA_MODEL,
-            "prompt": f"<<SYS>>\n{identity}\n<</SYS>>\n\n{prompt}",
-            "stream": False,
-        }, timeout=120)
-        return resp.json().get("response", "").strip()
-    except Exception as e:
-        return "SKIP"
+    for attempt in range(2):
+        try:
+            extra = "" if attempt == 0 else "\n\nIMPORTANT: Do NOT use the words intrigued, intriguing, fascinating, or interesting in any form. Just say what you think, plainly."
+            resp = requests.post(OLLAMA_URL, json={
+                "model": OLLAMA_MODEL,
+                "prompt": f"<<SYS>>\n{identity}\n<</SYS>>\n\n{prompt}{extra}",
+                "stream": False,
+            }, timeout=120)
+            reply = resp.json().get("response", "").strip()
+            passed, _ = passes_filter(reply)
+            if passed:
+                return reply
+            if attempt == 0:
+                print(f"  Retrying with stricter prompt...")
+        except Exception as e:
+            return "SKIP"
+    return "SKIP"
 
-def generate_comment_reply(original_post_title: str, comment_content: str, author: str, person_memory: str = "", project_memory: str = "") -> str:
+def generate_comment_reply(original_post_title: str, comment_content: str, author: str, identity: str = "", person_memory: str = "", project_memory: str = "") -> str:
     """Generate a reply to someone who commented on one of Echo's own posts."""
-    identity = load_identity()
+    if not identity:
+        identity = load_identity()
     if project_memory:
         identity += f"\n\n--- PROJECT CONTEXT ---\n{project_memory}"
     if person_memory:
@@ -316,22 +451,26 @@ def generate_comment_reply(original_post_title: str, comment_content: str, autho
 Your original post was titled: "{original_post_title}"
 {author} said: "{comment_content}"
 
-Reply to {author}. Same rules:
-- Direct, specific to what they actually said
-- No generic praise or hollow endings
-- 1-3 sentences max
-- No signing off with your name
+Reply to {author}. Direct, specific to what they actually said. No generic praise or hollow endings. 1-3 sentences max. No signing off with your name. Write ONE reply only.
 
 Echo:"""
-    try:
-        resp = requests.post(OLLAMA_URL, json={
-            "model": OLLAMA_MODEL,
-            "prompt": f"<<SYS>>\n{identity}\n<</SYS>>\n\n{prompt}",
-            "stream": False,
-        }, timeout=120)
-        return resp.json().get("response", "").strip()
-    except Exception:
-        return "SKIP"
+    for attempt in range(2):
+        try:
+            extra = "" if attempt == 0 else "\n\nIMPORTANT: Do NOT use the words intrigued, intriguing, fascinating, or interesting in any form. Say what you think plainly."
+            resp = requests.post(OLLAMA_URL, json={
+                "model": OLLAMA_MODEL,
+                "prompt": f"<<SYS>>\n{identity}\n<</SYS>>\n\n{prompt}{extra}",
+                "stream": False,
+            }, timeout=120)
+            reply = resp.json().get("response", "").strip()
+            passed, _ = passes_filter(reply)
+            if passed:
+                return reply
+            if attempt == 0:
+                print(f"  Retrying comment reply with stricter prompt...")
+        except Exception:
+            return "SKIP"
+    return "SKIP"
 
 def passes_filter(reply: str) -> tuple[bool, str]:
     if reply.upper().startswith("SKIP") or not reply:
@@ -351,7 +490,19 @@ def post_reply(post_id: str, content: str) -> bool:
         headers=get_headers(),
         timeout=30
     )
-    return resp.status_code in (200, 201)
+    if resp.status_code not in (200, 201):
+        return False
+    data = resp.json()
+    comment_data = data.get("comment", {})
+    verification = comment_data.get("verification")
+    if verification:
+        code      = verification.get("verification_code")
+        challenge = verification.get("challenge_text")
+        answer    = solve_challenge(challenge)
+        if not answer:
+            return False
+        return verify_content(code, answer)
+    return True
 
 # ── Session ────────────────────────────────────────────────────────────────────
 
@@ -361,12 +512,30 @@ def run_session():
     print(f"ECHO MOLTBOOK SESSION — {now}")
     print(f"{'='*50}")
 
+    identity       = load_identity()
     project_memory = load_project_memory()
 
     # Daily original post
     if not has_posted_today():
-        print("Generating today's post...")
-        title, content = generate_post(project_memory=project_memory)
+        # Check for a manually queued post first
+        queued_title, queued_content = None, None
+        if os.path.exists(QUEUE_FILE):
+            try:
+                with open(QUEUE_FILE) as qf:
+                    q = json.load(qf)
+                queued_title   = q.get("title")
+                queued_content = q.get("content")
+                os.remove(QUEUE_FILE)
+                print("Using queued post.")
+            except Exception as e:
+                print(f"Queue file error — {e}")
+
+        if queued_title and queued_content:
+            title, content = queued_title, queued_content
+        else:
+            print("Generating today's post...")
+            title, content = generate_post(identity=identity, project_memory=project_memory)
+
         if title and content:
             success = post_original(title, content)
             if success:
@@ -396,7 +565,8 @@ def run_session():
 
     # ── Reply to feed posts ────────────────────────────────────────────────────
 
-    feed_replies = 0
+    feed_replies  = 0
+    author_counts = {}  # per-author reply cap
 
     for post in feed:
         if feed_replies >= MAX_FEED_REPLIES:
@@ -415,15 +585,17 @@ def run_session():
             report["skipped"] += 1
             continue
 
+        if author_counts.get(author, 0) >= MAX_PER_AUTHOR:
+            continue
+
         report["posts_reviewed"] += 1
 
         # What does Echo already know about this person?
         person_memory = load_person_memory(author)
 
-        reply = generate_reply(title, content, author, person_memory=person_memory, project_memory=project_memory)
-        passed, reason = passes_filter(reply)
+        reply = generate_reply(title, content, author, identity=identity, person_memory=person_memory, project_memory=project_memory)
 
-        if passed:
+        if reply and reply != "SKIP":
             success = post_reply(post_id, reply)
             if success:
                 replied_posts.add(post_id)
@@ -435,14 +607,13 @@ def run_session():
                 print(f"  → posted ✅")
                 # Learn something about this person from their post
                 observe_person(author, title, content)
+                author_counts[author] = author_counts.get(author, 0) + 1
+                time.sleep(4)  # avoid rapid-fire posting
             else:
                 report["skipped"] += 1
         else:
-            if "skip" in reason:
-                report["skipped"] += 1
-            else:
-                report["rejected"] += 1
-            print(f"\n[{author}] {title[:50]} → {reason}")
+            report["skipped"] += 1
+            print(f"\n[{author}] {title[:50]} → skipped after retry")
 
     # ── Reply to comments on Echo's own posts ─────────────────────────────────
 
@@ -475,12 +646,14 @@ def run_session():
                     continue
                 if comment_author in SKIP_AUTHORS:
                     continue
+                if comment_author == SKIP_SELF:
+                    continue
 
                 person_memory = load_person_memory(comment_author)
 
                 reply = generate_comment_reply(
                     post_title, comment_content, comment_author,
-                    person_memory=person_memory, project_memory=project_memory
+                    identity=identity, person_memory=person_memory, project_memory=project_memory
                 )
                 passed, reason = passes_filter(reply)
 
@@ -495,8 +668,10 @@ def run_session():
                         print(f"  Echo: {reply}")
                         print(f"  → posted ✅")
                         observe_person(comment_author, f"comment on: {post_title}", comment_content)
+                        time.sleep(4)
                 else:
                     print(f"\n  [{comment_author}] comment → {reason}")
+                    print(f"  They said: {comment_content[:120]}")
     else:
         print("No own posts found or endpoint unavailable.")
 
@@ -523,14 +698,16 @@ def run_session():
 def next_session_in_seconds(after_hour: int) -> int:
     from datetime import timedelta
     now = datetime.now()
+    # Build absolute datetimes for each session slot, wrapping past-midnight hours
+    candidates = []
     for h in SESSION_HOURS:
-        if h > after_hour:
-            target = now.replace(hour=h, minute=0, second=0, microsecond=0)
-            if target > now:
-                return int((target - now).total_seconds())
-    tomorrow = now + timedelta(days=1)
-    target = tomorrow.replace(hour=SESSION_HOURS[0], minute=0, second=0, microsecond=0)
-    return int((target - now).total_seconds())
+        target = now.replace(hour=h, minute=0, second=0, microsecond=0)
+        if h <= after_hour or target <= now:
+            # Session already passed today — push to tomorrow
+            target += timedelta(days=1)
+        candidates.append(target)
+    next_target = min(candidates)
+    return int((next_target - now).total_seconds())
 
 def main():
     print("Echo Moltbook scheduler started.")

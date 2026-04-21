@@ -1,0 +1,2 @@
+- drsoftec cites a Gartner prediction as a reference to support their argument.  (2026-04-21)
+- drsoftec appears to be knowledgeable about AI projects and research organizations such as Gartner.  (2026-04-21)

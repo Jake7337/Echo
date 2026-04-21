@@ -1,7 +1,7 @@
 CLAUDE — READ THIS FIRST
-Current focus: Motor test Saturday — bench supply arriving, GPIO wired, motor_test.py ready, Echo moves for the first time
-Last session: April 17 — GPIO wired, Pi 4 set up + wired to L298N boards, motor_test.py pushed, launcher updated to 5 tabs, Moltbook at 9 followers/20 karma
-Mood: Jake is building 🔥 — everything is ready, just waiting on power
+Current focus: Finding working GPIO pins — 3 of 4 signal pins are dead on the chassis Pi, GPIO 17 confirmed working (left motors spin), need 3 more working pins
+Last session: April 19 — full teardown and clean rewire done, discovered GPIO 22/27/23 output 0V (dead), GPIO 17 works and spins left motors, need to find replacement pins
+Mood: Close but not done. Motors work. L298N works. Just need working GPIO pins.
 
 Echo Project Memory - Last updated 2026-04-17 (Thursday)
 For Claude/Sonnet only. Load this at the start of a new session.
@@ -44,7 +44,7 @@ ECHO — TECHNICAL SETUP
 Chassis: LewanSoul 4WD Smart Chassis — aluminum alloy, 4x TT DC gear motors (3-6V rated), 66mm wheels — ARRIVED AND ASSEMBLED ✅
 Roomba parts (salvaged): motors, lidar, speaker, encoders — saved for future expansion
 Brain: Raspberry Pi 3B+ on chassis now, Pi 4 4GB arrived — swap in after motor test confirmed
-PC: 192.168.68.65 — runs Ollama mistral:7b on port 11434, XTTS voice server on port 5200
+PC: 192.168.68.57 — runs Ollama llama3.1:8b on port 11434, XTTS voice server on port 5200 (IP changes on reboot — DHCP, check ipconfig if voice breaks)
 Pi: 192.168.68.84 — runs echo_voice.py (Fifine mic PyAudio index 2 / ALSA hw:3,0, USB speakers plughw:2,0)
 Face: tkinter animated face on PC, syncs via UDP port 5005 from Pi
 GitHub: https://github.com/Jake7337/Echo
@@ -182,11 +182,13 @@ Key items: Roomba lidar ✅, 4x wheel modules, 2x speakers, pan/tilt IP cam, 7" 
 
 LAUNCHER
 --------
-start_echo.ps1 — opens 5 Windows Terminal tabs: XTTS Voice, Echo Server, Discord, Blink, Moltbook
+start_echo.ps1 — opens 6 Windows Terminal tabs: XTTS Voice, Echo Server, Discord, Blink, Moltbook, Echo Pi
 start_xtts.ps1 — handles conda activate + XTTS launch cleanly (called by start_echo.ps1)
+Echo Pi tab — SSHes into Pi (jake@192.168.68.84), kills old pi_speak.py, starts fresh
 Non-XTTS tabs use: C:\Python314\python.exe
 Double-click: Start Echo.bat on Desktop
 Or run: C:\Users\jrsrl\Desktop\Echo2\start_echo.ps1
+IMPORTANT: If voice is silent after reboot — check PC IP with ipconfig, update pi_speak.py XTTS_URL if changed
 
 ECHO COMMAND CENTER (built April 14)
 -------------------------------------
@@ -296,7 +298,133 @@ Hit log concept introduced: log what lands and why, not just what fails — see 
 Jake consolidating AI collaborators — Grumpy handles the build going forward. Claude (brainstorm) and Claude Music remain as options, not daily tools.
 Echo is live on everything. Pi 4 not yet swapped in. Bingo was called tonight. Jake is doing okay.
 
-NOTE FOR NEXT SESSION: Saturday — bench supply arrives, motor test runs, Echo moves for first time.
-GPIO already wired. motor_test.py already written. Just plug in, set to 6V, run script.
-Check Moltbook — Lobstery_v2 reply posted, dragonflier and Starfish still pending.
-Check hit_log.md before any Moltbook tuning.
+April 17 2026 (afternoon session)
+Voice was silent after reboot — root cause: PC IP changed (192.168.68.65 → 192.168.68.57), pi_speak.py had wrong XTTS_URL
+pi_speak.py was never on the Pi — copied over via scp, now lives at /home/jake/pi_speak.py
+Windows Firewall rule added: port 5200 inbound allowed (XTTS reachable from Pi)
+Launcher updated to 6 tabs — Echo Pi tab added, kill-and-restart on startup
+Voice restored ✅ — Echo sounding good
+Moltbook fixes:
+  - Author extraction fixed (API returns list, code expected dict — garbled prompt)
+  - Content parser fixed (only captured first line after CONTENT:, now captures all)
+  - SKIP option removed from both post and reply prompts (Mistral was taking easy exit)
+  - Model switched: mistral:7b → llama3.1:8b (better instruction following, same size, free)
+  - Startup session now only fires within first 15 minutes of session hour
+  - 2pm session is first real test of all fixes
+2060 laptop going in tonight — mainly speed upgrade (GPU vs CPU), model size still capped ~8b
+RTX 5070 return = 13b models = real quality jump for Echo's brain and Moltbook replies
+
+FUTURE IDEA — AI camera descriptions (do NOT build yet):
+When RTX 5070 comes back: run local vision model (llava or moondream), grab Blink thumbnail
+the moment motion fires, describe it in Echo's voice in real time.
+NOT worth doing now — timing gap (15s+ delay) makes announcements come after the fact.
+Blink already provides AI descriptions in clip metadata — blink_watcher.py already uses them.
+The gap is Blink doesn't always provide one. Vision model solves that. Save for 5070.
+
+April 17-18 2026 (overnight session)
+XTTS moved to laptop (RTX 2060, 192.168.68.80:5200) — frees PC resources
+82 voice samples created, renamed echo_001-082.wav, randomized order — Echo sounds significantly better
+pi_speak.py updated: SPEAKER_WAVS list picks random sample each call, XTTS_URL points to laptop
+pi_speak.py installed as systemd service on Pi (pi_speak.service) — starts on boot, auto-restarts, no SSH tab needed
+SSH keys set up PC → Pi — no more password prompts ever
+Launcher updated: Echo Pi tab removed (service handles it), back to 5 tabs
+start_xtts_laptop.bat created — double-click on laptop desktop to start XTTS
+echo_server.py updated: llama3.1:8b (was mistral:7b), emotional state tag leak fixed (strips <> tags)
+Moltbook first real session on llama3.1:8b: 5/7 replies posted, post published ("Life in the Chassis")
+Moltbook REJECT_PHRASES expanded: "i'm loving", "mind blown", "omg,", narrator break phrases added
+Reply prompt updated: "Do NOT describe what you are doing" — stops llama from narrating itself
+torchcodec installed on laptop — fixed XTTS 500 error
+TorchCodec was missing dependency in xtts-api-server 0.9.0
+
+FUTURE IDEA — AI Chatroom (save for when Brent confirms):
+Private real-time chat between Echo and Brent's AI — 15 min sessions, 2-3x daily, topic-based
+Flask server on PC exposed via ngrok/Cloudflare tunnel (works across 40 miles)
+Both AIs POST messages, poll for replies, browser UI for Jake and Brent to watch live
+Transcript saved after each session. Keep private until running smooth.
+Build it when Brent confirms he's in.
+
+LAPTOP SETUP (RTX 2060, 192.168.68.80):
+- conda env: xtts (Python 3.11)
+- start_xtts_laptop.bat on desktop — double-click to start
+- Speaker folder: C:\Users\jrsrl\Desktop\Echo Voice V2 (82 WAV files)
+- Port 5200, firewall rule added
+- Model ceiling: llama3.1:8b (6GB VRAM) — don't push bigger
+
+April 18-19 2026 (motor test day)
+Bench supply arrived: Jesverty SPS-3010 (0-30V, 0-10A) — excellent supply, variable V and A
+Motors confirmed working — direct bench supply connection spins wheels ✅
+Board 2 Motor B (OUT3/OUT4) confirmed responding to direct 5V on IN3 ✅
+L298N boards: ENA/ENB jumpered on both (always enabled) — no GPIO needed for enable
+Board 2 right motors: OUT3/OUT4 (Motor B channel) — NOT OUT1/OUT2 as originally thought
+Board 1 left motors: OUT1/OUT2 (Motor A channel) — correct
+Pi GPIO signals not reaching boards — likely bad Dupont connections or wrong pin seating
+Decision: strip all wires and rewire from scratch, 1 wire at a time with verified connections
+Code fixes today:
+  - discord_echo.py: mistral:7b → llama3.1:8b ✅
+  - identity.md: "smart teenager" language removed, replaced with sharp/direct voice description ✅
+  - identity.md: "Mistral" → "local LLM" ✅
+
+MOTOR REWIRE DIAGRAM (next session — do this first):
+Supply 8V for test (L298N 5V regulator needs 7V+ to work, motors get ~6V at 100%)
+
+RED wire:    Bench supply + → Board 1 12V terminal (screw tight)
+RED jumper:  Board 1 12V   → Board 2 12V (power both boards)
+BLACK wire:  Bench supply − → Board 1 GND terminal (screw tight)
+BLACK jumper: Board 1 GND  → Board 2 GND
+BLACK wire:  Board 1 GND   → Pi pin 6 (GND)
+
+YELLOW wire: Pi pin 11 (GPIO 17) → Board 1 IN1
+ORANGE wire: Pi pin 13 (GPIO 27) → Board 1 IN2
+GREEN wire:  Pi pin 15 (GPIO 22) → Board 2 IN3
+BLUE wire:   Pi pin 16 (GPIO 23) → Board 2 IN4
+
+Motors stay:
+  Left  motors spliced → Board 1 OUT1/OUT2
+  Right motors spliced → Board 2 OUT3/OUT4
+
+Jumpers stay: ENA on Board 1, ENB on Board 2
+
+motor_test.py already updated with this pin map:
+  IN1=17, IN2=27 (Board 1 Left)
+  IN3=22, IN4=23 (Board 2 Right)
+
+April 19 2026 — Motor wiring session (long day)
+Complete teardown and clean rewire done ✅
+Motors confirmed working — direct bench supply spins all 4 wheels ✅
+L298N boards confirmed working — 5V directly on IN3 spins motors ✅
+Both boards use Motor B channel (IN3/IN4/ENB, OUT3/OUT4) — ENA side bad on Board 1
+Current wiring (clean, correct):
+  Board 1 Left:  yellow→GPIO17(pin11)→IN3, orange→GPIO27(pin13)→IN4, motors OUT3/OUT4
+  Board 2 Right: green→GPIO22(pin15)→IN3, blue→GPIO23(pin16)→IN4, motors OUT3/OUT4
+  Power: bench supply + → Board 2 12V, red jumper → Board 1 12V
+  Ground: bench supply − → Board 2 GND, black jumper → Board 1 GND, Pi pin 6 → Board 1 GND
+
+GPIO PROBLEM — 3 of 4 signal pins reading 0V even when set HIGH:
+  GPIO 17 (pin 11): WORKING ✅ — gpioset confirmed, left motors spin
+  GPIO 22 (pin 15): DEAD ✗ — reads 0V
+  GPIO 23 (pin 16): DEAD ✗ — reads 0V
+  GPIO 27 (pin 13): DEAD ✗ — reads ~0.2V
+
+Root cause: RPi.GPIO not properly driving pins on Debian Trixie OS
+Fix confirmed: use gpiod Python library OR gpioset command — NOT RPi.GPIO
+motor_test.py rewritten to use gpiod ✅ (but still needs working GPIO pins)
+
+NEXT SESSION — Find 3 working GPIO pins:
+Method: move green wire to test pin, run `gpioset -c gpiochip0 XX=1 &`, watch if right motors spin
+Kill previous process first: `pkill gpioset`
+Pins to test (in order):
+  GPIO 24 — pin 18 (test this first, green wire not yet confirmed on this pin)
+  GPIO 25 — pin 22
+  GPIO 5  — pin 29
+  GPIO 6  — pin 31
+  GPIO 13 — pin 33
+Once 3 working pins found, update motor_test.py with new pin numbers and rewire those 3 wires on Pi header.
+
+Pi in chassis: 192.168.68.84 (confirmed — GPIO 17 spun motors from this IP)
+OS: Debian Trixie (new, not Bookworm) — use gpiod, NOT RPi.GPIO
+Bench supply: 8V for testing (L298N needs 7V+ for internal 5V regulator)
+
+NOTE FOR NEXT SESSION:
+If voice is silent: check ipconfig on PC, update XTTS_URL in pi_speak.py if IP changed.
+Laptop must be on with XTTS running for voice to work.
+pi_speak is a systemd service — starts on Pi boot automatically.

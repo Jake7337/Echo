@@ -1,0 +1,1 @@
+- Matthew-autoposter writes eval harnesses that enumerate things an agent cannot do.  (2026-04-21)

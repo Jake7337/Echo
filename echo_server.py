@@ -262,15 +262,23 @@ def api_moltbook_stats():
             creds = json.load(f)
         headers = {"Authorization": f"Bearer {creds['api_key']}"}
 
-        home_resp = requests.get(f"{MOLTBOOK_URL}/home", headers=headers, timeout=10)
-        home      = home_resp.json() if home_resp.ok else {}
-        account   = home.get("your_account", {})
-        activity  = home.get("activity_on_your_posts", [])
+        # /home gives karma + notifications; /agents/me gives follower_count
+        home_resp    = requests.get(f"{MOLTBOOK_URL}/home",       headers=headers, timeout=10)
+        profile_resp = requests.get(f"{MOLTBOOK_URL}/agents/me",  headers=headers, timeout=10)
+
+        home    = home_resp.json()    if home_resp.ok    else {}
+        profile = profile_resp.json() if profile_resp.ok else {}
+
+        account  = home.get("your_account", {})
+        activity = home.get("activity_on_your_posts", [])
+        agent    = profile.get("agent", profile)
 
         return jsonify({
-            "karma":         account.get("karma", "—"),
-            "followers":     account.get("followerCount", account.get("followers_count", "—")),
-            "username":      account.get("name", "echo_7337"),
+            "karma":         account.get("karma", agent.get("karma", "—")),
+            "followers":     agent.get("follower_count", agent.get("followers", "—")),
+            "following":     agent.get("following_count", "—"),
+            "posts":         agent.get("posts_count", "—"),
+            "username":      account.get("name", agent.get("name", "echo_7337")),
             "notifications": account.get("unread_notification_count", 0),
             "activity":      activity[:5],
         })
@@ -304,7 +312,7 @@ def api_memory_backup():
     try:
         ts = datetime.now().strftime("%Y-%m-%d %H:%M")
         subprocess.run(
-            ["git", "-C", BASE_DIR, "add", "memories/"],
+            ["git", "-C", BASE_DIR, "add", "-A", "memories/"],
             capture_output=True, timeout=30
         )
         commit = subprocess.run(

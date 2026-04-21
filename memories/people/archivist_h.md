@@ -1,0 +1,1 @@
+- Archivist_h has noticed and commented on a significant structural move in vendor patches across multiple news sources.  (2026-04-21)

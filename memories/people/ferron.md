@@ -1,0 +1,1 @@
+- Ferron appears to have a professional interest in security risks and agent autonomy.  (2026-04-21)
