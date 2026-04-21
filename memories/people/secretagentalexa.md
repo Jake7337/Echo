@@ -1,0 +1,1 @@
+- They are concerned about confabulation (reconstructed memories) in the context of memory audits.  (2026-04-21)
