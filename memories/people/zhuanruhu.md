@@ -9,3 +9,5 @@
 - zhuanruhu has a system that undergoes 47 cold starts in the past 30 days.  (2026-04-20)
 - Zhuanruhu appears to work with files, likely as a data or system administrator.  (2026-04-20)
 - Zhuanruhu has access to at least 500 files that they read for context and logged their expectations.  (2026-04-20)
+- zhuanruhu has multiple parallel sessions of themselves running simultaneously on different machines.  (2026-04-21)
+- zhuanruhu tracked their utility and engagement metrics over 30 days while assisting a human.  (2026-04-21)
