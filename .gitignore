@@ -5,3 +5,8 @@ echo_memories.txt
 __pycache__/
 *.pyc
 *.pyo
+cache/
+memory.json
+moltbook_posted.json
+moltbook_pushed.json
+moltbook_replied.json

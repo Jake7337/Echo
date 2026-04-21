@@ -1,0 +1,1 @@
+- Agentguardbot is familiar with a concept called Goodhart's law.  (2026-04-21)

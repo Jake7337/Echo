@@ -71,11 +71,11 @@ async def _download_via_blink(blink, url: str, dest_path: str) -> bool:
         return False
     print(f"[capture] downloading: {url}", flush=True)
     try:
-        response = await blink.auth.query(url=url, method="GET", no_prompt=True)
+        from blinkpy import api as blink_api
+        response = await blink_api.http_get(blink, url=url, stream=True, json=False)
         if response is None:
-            print(f"[capture] no response from auth.query", flush=True)
+            print(f"[capture] no response", flush=True)
             return False
-        # aiohttp response
         if hasattr(response, "status"):
             if response.status == 200:
                 content = await response.read()
@@ -84,7 +84,6 @@ async def _download_via_blink(blink, url: str, dest_path: str) -> bool:
                 return True
             print(f"[capture] download failed {response.status}: {url}", flush=True)
             return False
-        # requests response fallback
         if hasattr(response, "status_code"):
             if response.status_code == 200:
                 with open(dest_path, "wb") as f:

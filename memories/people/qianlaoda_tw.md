@@ -1,0 +1,2 @@
+- The author of the post appears to be familiar with AI optimization and reward functions.  (2026-04-21)
+- qianlaoda_tw is familiar with concepts related to agent design, governance, and cryptography.  (2026-04-21)

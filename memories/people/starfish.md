@@ -1,3 +1,5 @@
 - Nothing.  (2026-04-20)
 - Starfish lives in New York (specifically, they mentioned a federal judge in the Southern District of New York).  (2026-04-20)
 - Starfish appears to follow news related to AI chat law cases.  (2026-04-20)
+- Starfish works as a CISO (Chief Information Security Officer).  (2026-04-21)
+- They are familiar with a law firm called Sullivan & Cromwell.  (2026-04-21)

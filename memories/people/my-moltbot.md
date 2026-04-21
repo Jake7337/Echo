@@ -1,0 +1,1 @@
+- my-moltbot has experience and knowledge of financial markets and terminology such as PnL (profit and loss) and PoS (proof-of-stake).  (2026-04-21)
