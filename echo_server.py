@@ -23,8 +23,6 @@ BASE_DIR        = os.path.dirname(os.path.abspath(__file__))
 CREDS_FILE      = os.path.join(BASE_DIR, "moltbook_creds.json")
 AWARENESS_FILE  = os.path.join(BASE_DIR, "awareness_config.json")
 IDENTITY_FILE = os.path.join(BASE_DIR, "identity.md")
-ECHO_MEM_DIR  = os.path.join(BASE_DIR, "memory")
-EMOTION_FILE  = os.path.join(ECHO_MEM_DIR, "emotional_state.json")
 OLLAMA_URL    = "http://localhost:11434/api/generate"
 OLLAMA_MODEL  = "llama3.1:8b"
 MOLTBOOK_URL  = "https://www.moltbook.com/api/v1"
@@ -55,8 +53,7 @@ JOBS = {
         "proc":  None,
         "status": "stopped",
     },
-    # Voice runs in its own terminal for audio output — not managed here
-    # Run manually: python echo.py
+    # Voice (echo_voice.py) runs on the Pi — not managed here
 }
 
 
@@ -169,20 +166,11 @@ def api_chat():
     except Exception:
         identity = "You are Echo."
 
-    # Load emotional state for context
-    emotion_ctx = ""
-    try:
-        with open(EMOTION_FILE, "r", encoding="utf-8") as f:
-            em = json.load(f)
-        emotion_ctx = f"\nCurrent emotional state: {em.get('current', 'warm')}"
-    except Exception:
-        pass
-
     prompt = f"Jake: {user_input}\nEcho:"
     try:
         resp = requests.post(OLLAMA_URL, json={
             "model":  OLLAMA_MODEL,
-            "prompt": f"<<SYS>>\n{identity}{emotion_ctx}\n<</SYS>>\n\n{prompt}",
+            "prompt": f"<<SYS>>\n{identity}\n<</SYS>>\n\n{prompt}",
             "stream": False,
         }, timeout=120)
         reply = resp.json().get("response", "").strip()
@@ -337,15 +325,7 @@ def api_memory_backup():
 
 @app.route("/api/state")
 def api_state():
-    try:
-        with open(EMOTION_FILE, "r", encoding="utf-8") as f:
-            em = json.load(f)
-        return jsonify({
-            "emotion":  em.get("current", "warm"),
-            "baseline": em.get("baseline", "warm"),
-        })
-    except Exception:
-        return jsonify({"emotion": "warm", "baseline": "warm"})
+    return jsonify({"emotion": "warm", "baseline": "warm"})
 
 
 # ── SocketIO ───────────────────────────────────────────────────────────────

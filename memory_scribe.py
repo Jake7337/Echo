@@ -15,13 +15,14 @@ Rooms (memories/ folder):
 import os
 import requests
 import threading
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 
 OLLAMA_URL   = "http://192.168.68.57:11434/api/generate"
 OLLAMA_MODEL = "llama3.1:8b"
 
-MEMORIES_DIR = Path(os.path.dirname(os.path.abspath(__file__))) / "memories"
+MEMORIES_DIR        = Path(os.path.dirname(os.path.abspath(__file__))) / "memories"
+PROJECT_MEMORY_FILE = Path(os.path.dirname(os.path.abspath(__file__))) / "Echo_Memory.txt"
 
 ROOMS = {
     "jake_preferences": "jake_preferences.md",
@@ -52,6 +53,17 @@ FACT: [one clear sentence stating what was learned about Jake]
 If there is nothing worth storing, respond with exactly: NOTHING"""
 
 
+def _append_project_memory(category: str, fact: str):
+    """Append a one-liner to Echo_Memory.txt so it stays current."""
+    ts = datetime.now().strftime("%Y-%m-%d %H:%M")
+    entry = f"[{ts}] ({category}) {fact}\n"
+    try:
+        with open(PROJECT_MEMORY_FILE, "a", encoding="utf-8") as f:
+            f.write(entry)
+    except Exception as e:
+        print(f"[scribe] Echo_Memory.txt write failed — {e}", flush=True)
+
+
 def _write_to_room(category: str, fact: str):
     MEMORIES_DIR.mkdir(exist_ok=True)
     filename = ROOMS.get(category, "jake_profile.md")
@@ -60,6 +72,7 @@ def _write_to_room(category: str, fact: str):
     with open(room_path, "a", encoding="utf-8") as f:
         f.write(f"- {fact}  ({today})\n")
     print(f"[scribe] → {category}: {fact}", flush=True)
+    _append_project_memory(category, fact)
 
 
 def _run_scribe(user_input: str, echo_response: str):

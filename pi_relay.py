@@ -23,12 +23,6 @@ CORS(app)
 sio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
 
 JOBS = {
-    "pi_speak": {
-        "label": "Pi Speak",
-        "cmd":   ["python", os.path.join(BASE_DIR, "pi_speak.py")],
-        "proc":  None,
-        "status": "stopped",
-    },
     "echo_voice": {
         "label": "Echo Voice",
         "cmd":   ["python", os.path.join(BASE_DIR, "echo_voice.py")],
@@ -37,8 +31,8 @@ JOBS = {
     },
 }
 
-
-AUTORESTART_JOBS = {"pi_speak"}  # jobs that should restart automatically if they crash
+# pi_speak is managed by systemd — do NOT add it here or you get two instances
+AUTORESTART_JOBS = set()
 
 def _stream_output(job_id: str, proc):
     import time
@@ -146,7 +140,6 @@ def on_connect():
 
 if __name__ == "__main__":
     print("Pi relay starting — auto-launching jobs...")
-    start_job("pi_speak")
     start_job("echo_voice")
     print("Pi relay running on port 5101")
     sio.run(app, host="0.0.0.0", port=5101, debug=False, allow_unsafe_werkzeug=True)

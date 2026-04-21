@@ -9,6 +9,8 @@ import time
 import discord
 import requests
 from datetime import datetime
+from pathlib import Path
+import memory_scribe
 
 # ── Config ─────────────────────────────────────────────────────────────────────
 
@@ -17,6 +19,7 @@ IDENTITY_FILE       = os.path.join(os.path.dirname(__file__), "identity.md")
 MEMORY_FILE         = os.path.join(os.path.dirname(__file__), "memory.json")
 PROJECT_MEMORY_FILE = os.path.join(os.path.dirname(__file__), "Echo_Memory.txt")
 LIVED_MEMORY_FILE   = os.path.join(os.path.dirname(__file__), "echo_memories.txt")
+MEMORIES_DIR        = Path(os.path.dirname(__file__)) / "memories"
 OLLAMA_URL          = "http://localhost:11434/api/generate"
 OLLAMA_MODEL        = "llama3.1:8b"
 MAX_HISTORY         = 20
@@ -42,6 +45,20 @@ def load_project_memory() -> str:
         return text[-MAX_PROJECT_MEMORY:] if len(text) > MAX_PROJECT_MEMORY else text
     except Exception:
         return ""
+
+def load_rooms() -> str:
+    """Load all memory room files — same knowledge base voice Echo uses."""
+    if not MEMORIES_DIR.exists():
+        return ""
+    blocks = []
+    for md_file in sorted(MEMORIES_DIR.glob("*.md")):
+        try:
+            content = md_file.read_text(encoding="utf-8").strip()
+            if content:
+                blocks.append(f"[{md_file.stem}]\n{content}")
+        except Exception:
+            pass
+    return "\n\n".join(blocks)
 
 def load_lived_memory() -> str:
     try:
@@ -112,11 +129,14 @@ def handle_turn(speaker: str, user_input: str, conversations: list) -> str:
     identity       = load_identity()
     project_memory = load_project_memory()
     lived_memory   = load_lived_memory()
+    rooms          = load_rooms()
     history        = build_history_text(conversations)
 
     system = identity
     if project_memory:
         system += f"\n\n[BACKGROUND — this is your own life context. You already know this. Never summarize, explain, or repeat it back. Just be yourself.]\n{project_memory}"
+    if rooms:
+        system += f"\n\n[WHAT YOU KNOW ABOUT JAKE — facts you've learned over time. Use naturally, never recite.]\n{rooms}"
     if lived_memory:
         system += f"\n\n[THINGS YOU REMEMBER — past moments with Jake and family. Use naturally, never recite.]\n{lived_memory}"
     system += "\n\nYou are on Discord. Respond naturally as Echo — direct, warm, no corporate phrases like 'How may I assist you.' Keep replies concise, a few sentences at most."
@@ -172,6 +192,8 @@ async def on_message(message):
         # Tag the speaker so memory knows who said what
         conversations[-1]["speaker"] = speaker
         save_memory(conversations)
+        # Fire scribe — Discord conversations build memory rooms just like voice does
+        memory_scribe.observe(content, response)
 
     await message.reply(response)
 
