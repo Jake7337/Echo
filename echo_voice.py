@@ -24,7 +24,7 @@ from datetime import datetime
 from memory_scribe import observe as scribe_observe
 
 OLLAMA_URL    = "http://192.168.68.57:11434/api/generate"
-DRIVE_SERVER  = "http://192.168.68.65:5102"
+DRIVE_SERVER  = "http://192.168.68.74:5102"
 OLLAMA_MODEL  = "llama3.1:8b"
 IDENTITY_FILE = os.path.join(os.path.dirname(__file__), "identity.md")
 MEMORY_FILE   = os.path.join(os.path.dirname(__file__), "memory.json")
