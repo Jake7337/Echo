@@ -263,11 +263,7 @@ def listen() -> tuple:
     r.energy_threshold = 200
     r.pause_threshold = 1.0
 
-    mic_index = None
-    for i, name in enumerate(sr.Microphone.list_microphone_names()):
-        if "Fifine" in name or "fifine" in name.lower():
-            mic_index = i
-            break
+    mic_index = MIC_CARD  # use fixed card index, skip slow device enumeration
 
     try:
         with sr.Microphone(device_index=mic_index) as source:
