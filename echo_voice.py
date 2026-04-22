@@ -13,6 +13,11 @@ import socket
 import subprocess
 import threading
 import requests
+
+# Kill JACK before anything else loads — prevents PyAudio from hanging on JACK
+os.environ["JACK_NO_START_SERVER"] = "1"
+os.environ["JACK_NO_AUDIO_RESERVATION"] = "1"
+os.environ["AUDIODEV"] = "hw:4,0"
 import numpy as np
 import speech_recognition as sr
 from piper import PiperVoice
@@ -33,7 +38,7 @@ LIVED_MEMORY_FILE   = os.path.join(os.path.dirname(__file__), "echo_memories.txt
 MAX_HISTORY         = 20
 MAX_LIVED_ENTRIES   = 100
 
-MIC_CARD      = 2   # Fifine Microphone — PyAudio index 2 (ALSA hw:3,0)
+MIC_CARD      = 4   # USB Mic on Pi 4 chassis (card 4)
 SPEAKER_CARD  = 2   # USB AUDIO
 PIPER_MODEL   = os.path.join(os.path.dirname(os.path.abspath(__file__)), "en_US-lessac-medium.onnx")
 FACE_HOST      = "192.168.68.57"   # PC IP
@@ -109,7 +114,7 @@ def wait_for_wake_word():
         model.prediction_buffer[key].clear()
 
     proc = subprocess.Popen(
-        ["arecord", "-D", "hw:3,0", "-f", "S16_LE", "-r", str(MIC_RATE), "-c", "1", "-q", "-"],
+        ["arecord", "-D", "hw:4,0", "-f", "S16_LE", "-r", str(MIC_RATE), "-c", "1", "-q", "-"],
         stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
     )
     print("Waiting for wake word ('Hey Jarvis')...", flush=True)
@@ -252,7 +257,7 @@ def speak(text: str, voice: PiperVoice = None):
     """Route speech through pi_speak server so audio device is owned in one place."""
     import requests
     try:
-        requests.post("http://192.168.68.74:5100/speak", json={"text": text}, timeout=90)
+        requests.post("http://127.0.0.1:5100/speak", json={"text": text}, timeout=90)
     except Exception as e:
         print(f"[voice] speak failed — {e}", flush=True)
 
