@@ -122,7 +122,7 @@ def wait_for_wake_word():
             audio_16k = resample_poly(audio_44k, OWW_RATE, MIC_RATE).astype(np.int16)
             prediction = model.predict(audio_16k)
             score = prediction.get("hey_jarvis_v0.1", 0)
-            if score > 0.5:
+            if score > 0.3:
                 print(f"[wake] Detected (score={score:.2f})", flush=True)
                 for _ in range(5):
                     proc.stdout.read(CHUNK_BYTES)
@@ -421,7 +421,7 @@ def main():
             set_face("idle")
             wait_for_wake_word()
             set_face("listening")
-            import time; time.sleep(2.0)  # wait for wake word audio to clear mic
+            import time; time.sleep(1.0)  # wait for wake word audio to clear mic
             user_input, audio_data = listen()
         except KeyboardInterrupt:
             print("\nGoodbye.")
