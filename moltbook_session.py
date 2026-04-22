@@ -218,78 +218,126 @@ Echo:"""
 
 def solve_challenge(challenge_text: str) -> str:
     """
-    Two-step solver: Ollama decodes the obfuscated text and extracts the
-    math expression; Python evaluates it. Keeps arithmetic out of the LLM.
+    Python-first solver: extract numbers and operation directly from cleaned text.
+    Ollama is fallback only — it kept getting numbers wrong.
     """
     import re
 
     print(f"  Raw challenge: {challenge_text[:120]}")
 
-    import re as _re
-
-    # Strip ALL non-alpha characters (including spaces), lowercase, then collapse
-    # repeated consecutive chars. This reassembles split words:
-    #   "f iv ee" → "five", "tw en sev en" → "twenseven", "sIiXxTyY" → "sixty"
-    #   "nOoToNs" → "notons", "fOuR-lEeN" → "fourteen"
-    alpha_only = _re.sub(r"[^a-zA-Z]", "", challenge_text).lower()
-    cleaned    = _re.sub(r"(.)\1+", r"\1", alpha_only)
+    # Strip non-alpha, lowercase, collapse consecutive repeated chars
+    alpha_only = re.sub(r"[^a-zA-Z]", "", challenge_text).lower()
+    cleaned    = re.sub(r"(.)\1+", r"\1", alpha_only)
     print(f"  Cleaned text: {cleaned[:120]}")
 
-    prompt = f"""A math word problem has been obfuscated — all spaces and punctuation removed, repeated letters collapsed.
-Decode the two numbers and the operation.
+    # ── Number word table ──────────────────────────────────────────────────────
+    NUMS = {
+        # Base words (dedup-safe variants included)
+        "zero":0,"one":1,"two":2,"thre":3,"three":3,"four":4,"five":5,
+        "six":6,"seven":7,"eight":8,"nine":9,"ten":10,
+        "eleven":11,"twelve":12,"thirteen":13,
+        "fourteen":14,"fifteen":15,"fiften":15,
+        "sixteen":16,"seventeen":17,
+        "eighteen":18,"eighten":18,
+        "nineteen":19,"nineten":19,
+        "twenty":20,"thirty":30,"forty":40,"fifty":50,
+        "sixty":60,"seventy":70,"eighty":80,"ninety":90,"hundred":100,
+        # Compounds — all tens + 1-9, plus dedup variants for -three
+        "twentyone":21,"twentytwo":22,"twentythre":23,"twentythree":23,
+        "twentyfour":24,"twentyfive":25,"twentysix":26,"twentyseven":27,
+        "twentyeight":28,"twentynine":29,
+        "thirtyone":31,"thirtytwo":32,"thirtythre":33,"thirtythree":33,
+        "thirtyfour":34,"thirtyfive":35,"thirtysix":36,"thirtyseven":37,
+        "thirtyeight":38,"thirtynine":39,
+        "fortyone":41,"fortytwo":42,"fortythre":43,"fortythree":43,
+        "fortyfour":44,"fortyfive":45,"fortysix":46,"fortyseven":47,
+        "fortyeight":48,"fortynine":49,
+        "fiftyone":51,"fiftytwo":52,"fiftythre":53,"fiftythree":53,
+        "fiftyfour":54,"fiftyfive":55,"fiftysix":56,"fiftyseven":57,
+        "fiftyeight":58,"fiftynine":59,
+        "sixtyone":61,"sixtytwo":62,"sixtythre":63,"sixtythree":63,
+        "sixtyfour":64,"sixtyfive":65,"sixtysix":66,"sixtyseven":67,
+        "sixtyeight":68,"sixtynine":69,
+        "seventyone":71,"seventytwo":72,"seventythre":73,"seventythree":73,
+        "seventyfour":74,"seventyfive":75,"seventysix":76,"seventyseven":77,
+        "seventyeight":78,"seventynine":79,
+        "eightyone":81,"eightytwo":82,"eightythre":83,"eightythree":83,
+        "eightyfour":84,"eightyfive":85,"eightysix":86,"eightyseven":87,
+        "eightyeight":88,"eightynine":89,
+        "ninetyone":91,"ninetytwo":92,"ninetythre":93,"ninetythree":93,
+        "ninetyfour":94,"ninetyfive":95,"ninetysix":96,"ninetyseven":97,
+        "ninetyeight":98,"ninetynine":99,
+    }
 
-COMPOUND NUMBERS (no spaces — treat as ONE number):
-twentyone=21 twentytwo=22 twentythre=23 twentyfour=24 twentyfive=25
-twentysix=26 twentyseven=27 twentyeight=28 twentynine=29
-thirtyone=31 thirtytwo=32 thirtythre=33 thirtyfour=34 thirtyfive=35
-fortyfive=45 fiftyfive=55 sixtyfive=65 seventyfive=75
-fourteen=14 fifteen=15 sixteen=16 seventeen=17 eighteen=18 nineteen=19
-eleven=11 twelve=12 thirteen=13
+    # Match longest words first so "twentyfive" wins over "twenty" and "five"
+    sorted_keys = sorted(NUMS.keys(), key=len, reverse=True)
+    pattern     = re.compile("|".join(re.escape(k) for k in sorted_keys))
+    matches     = [(m.start(), NUMS[m.group()], m.group()) for m in pattern.finditer(cleaned)]
 
-SINGLE NUMBERS: zero=0 one=1 two=2 three=3 four=4 five=5 six=6 seven=7
-eight=8 nine=9 ten=10 twenty=20 thirty=30 forty=40 fifty=50 sixty=60
-seventy=70 eighty=80 ninety=90 hundred=100
+    # ── Operation detection ────────────────────────────────────────────────────
+    subtract_words = ["loses","slows","decreases","drops","minus","slower",
+                      "reduces","remain","howmuchremain","subtracted","lesn","les"]
+    multiply_words = ["multiplies","multiplied","times","product","doubles","doubled","doubl"]
+    divide_words   = ["divided","divides","halved","halves"]
 
-OPERATIONS (look at context):
-- loses/decreases/slows/drops/minus → NUMBER1 - NUMBER2
-- adds/gains/accelerates/increases/plus/total/combined/sum → NUMBER1 + NUMBER2
-- swimsatXpersecondforYseconds (how far?) → NUMBER1 * NUMBER2
-- dividedby → NUMBER1 / NUMBER2
+    is_subtract = any(w in cleaned for w in subtract_words)
+    is_multiply = any(w in cleaned for w in multiply_words)
+    is_divide   = any(w in cleaned for w in divide_words)
 
-Reply with ONLY: NUMBER OP NUMBER
-Examples: "25 - 5"  "32 + 14"  "27 * 4"  "65 + 24"
+    # "doubles/doubled" with no second number → A * 2
+    if (is_multiply and any(w in cleaned for w in ["doubles","doubled","doubl"])
+            and len(matches) < 2):
+        if matches:
+            a      = matches[0][1]
+            result = a * 2
+            print(f"  Challenge decoded: {a} * 2 (doubles)")
+            print(f"  Computed: {a} * 2 = {result:.2f}")
+            return f"{result:.2f}"
+
+    # Need at least 2 numbers for everything else
+    if len(matches) < 2:
+        print(f"  Python extraction found {len(matches)} number(s) — falling back to Ollama")
+        return _ollama_fallback(cleaned)
+
+    a_val = matches[0][1]
+    b_val = matches[1][1]
+
+    if is_subtract:
+        result, op = a_val - b_val, "-"
+    elif is_multiply:
+        result, op = a_val * b_val, "*"
+    elif is_divide:
+        result, op = (a_val / b_val if b_val != 0 else 0), "/"
+    else:
+        result, op = a_val + b_val, "+"
+
+    print(f"  Challenge decoded: {a_val} {op} {b_val}")
+    print(f"  Computed: {a_val} {op} {b_val} = {result:.2f}")
+    return f"{result:.2f}"
+
+
+def _ollama_fallback(cleaned: str) -> str:
+    """Last resort: ask Ollama to compute the answer directly as a number."""
+    import re
+    prompt = f"""A math word problem with spaces and punctuation removed, repeated letters collapsed.
+Find the two numbers and the operation (add/subtract/multiply/divide) and return ONLY the final answer to 2 decimal places.
+Example output: 42.00
 
 Problem: {cleaned}
 
-Expression:"""
-
+Answer:"""
     try:
         resp = requests.post(OLLAMA_URL, json={
-            "model": OLLAMA_MODEL,
-            "prompt": prompt,
-            "stream": False,
+            "model": OLLAMA_MODEL, "prompt": prompt, "stream": False,
         }, timeout=30)
-        raw = resp.json().get("response", "").strip().splitlines()[0].strip()
-        print(f"  Challenge decoded: {raw}")
-
-        # Sanitize: only digits, spaces, operators, decimal points
-        safe = re.sub(r"[^\d\s\+\-\*\/\.]", "", raw).strip()
-        # Must match NUMBER OP NUMBER (exactly one operator between two numbers)
-        match = re.fullmatch(r"(-?[\d.]+)\s*([\+\-\*\/])\s*(-?[\d.]+)", safe)
-        if match:
-            a  = float(match.group(1))
-            op = match.group(2)
-            b  = float(match.group(3))
-            if op == "+" : result = a + b
-            elif op == "-": result = a - b
-            elif op == "*": result = a * b
-            elif op == "/": result = a / b if b != 0 else 0
-            answer = f"{result:.2f}"
-            print(f"  Computed: {a} {op} {b} = {answer}")
-            return answer
-        print(f"  Could not parse clean expression from: {repr(safe)}")
+        raw  = resp.json().get("response", "").strip().splitlines()[0].strip()
+        print(f"  Ollama fallback returned: {raw}")
+        num  = re.search(r"-?[\d]+(?:\.[\d]+)?", raw)
+        if num:
+            val = float(num.group())
+            return f"{val:.2f}"
     except Exception as e:
-        print(f"  Challenge solver error: {e}")
+        print(f"  Ollama fallback error: {e}")
     return None
 
 def verify_content(verification_code: str, answer: str) -> bool:
