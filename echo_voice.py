@@ -425,13 +425,34 @@ def main():
     speak("Echo is here.", voice)
     conversations = load_memory()
 
+    listening = False
+    print("Press ENTER to toggle listening ON/OFF")
+    print("Echo is standing by.\n")
+
+    import threading
+    def toggle_listener():
+        nonlocal listening
+        while True:
+            input()
+            listening = not listening
+            if listening:
+                print("\n[Echo ON] Listening...")
+                set_face("listening")
+            else:
+                print("\n[Echo OFF] Standing by.")
+                set_face("idle")
+
+    t = threading.Thread(target=toggle_listener, daemon=True)
+    t.start()
+
     while True:
         try:
-            set_face("idle")
-            wait_for_wake_word()
-            set_face("listening")
-            import time; time.sleep(1.5)  # wait for wake word audio to clear mic
+            if not listening:
+                import time; time.sleep(0.2)
+                continue
+
             user_input, audio_data = listen()
+
         except KeyboardInterrupt:
             print("\nGoodbye.")
             set_face("idle")
