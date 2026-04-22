@@ -21,11 +21,10 @@ from datetime import datetime
 
 # ── Config ─────────────────────────────────────────────────────────────────────
 
-from voice_identify import identify_voice
 from memory_scribe import observe as scribe_observe
 
 OLLAMA_URL    = "http://192.168.68.57:11434/api/generate"
-DRIVE_SERVER = "http://192.168.68.65:5102"
+DRIVE_SERVER  = "http://192.168.68.65:5102"
 OLLAMA_MODEL  = "llama3.1:8b"
 IDENTITY_FILE = os.path.join(os.path.dirname(__file__), "identity.md")
 MEMORY_FILE   = os.path.join(os.path.dirname(__file__), "memory.json")
@@ -44,6 +43,43 @@ IDENTIFY_URL   = "http://192.168.68.57:5050/api/identify"
 WAKE_WORD = "hey_jarvis"
 
 _udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+# ── Drive commands ─────────────────────────────────────────────────────────────
+
+DRIVE_KEYWORDS = {
+    "forward":       ("forward", 2),
+    "go forward":    ("forward", 2),
+    "move forward":  ("forward", 2),
+    "drive forward": ("forward", 2),
+    "backward":      ("backward", 2),
+    "go backward":   ("backward", 2),
+    "reverse":       ("backward", 2),
+    "go back":       ("backward", 2),
+    "turn left":     ("left", 1.5),
+    "go left":       ("left", 1.5),
+    "turn right":    ("right", 1.5),
+    "go right":      ("right", 1.5),
+    "stop":          ("stop", 0),
+    "stop moving":   ("stop", 0),
+}
+
+def parse_drive_command(text):
+    t = text.lower().strip()
+    for phrase, (direction, duration) in DRIVE_KEYWORDS.items():
+        if phrase in t:
+            return direction, duration
+    return None, None
+
+def send_drive(direction, duration):
+    try:
+        requests.post(
+            f"{DRIVE_SERVER}/drive",
+            json={"direction": direction, "duration": duration},
+            timeout=3
+        )
+    except Exception as e:
+        print(f"[drive] Error: {e}")
+
 
 # ── Wake word ──────────────────────────────────────────────────────────────────
 
@@ -404,11 +440,10 @@ def main():
         if direction:
             print(f"[drive] {direction} for {duration}s")
             send_drive(direction, duration)
-            speak(f"On it.", voice)
+            speak("On it.", voice)
             conversations = add_exchange(conversations, user_input, "On it.")
             save_memory(conversations)
             continue
-
 
         if user_input.lower() in ("quit", "exit", "bye"):
             print("Echo: Talk later.")
@@ -416,30 +451,8 @@ def main():
             speak("Talk later.", voice)
             break
 
-        # Fire camera identify in background while we do voice ID instantly
-        id_thread = start_identify()
-
-        # Voice ID — instant, no network call
-        voice_person = "unknown"
-        if audio_data:
-            voice_person = identify_voice(audio_data)
-            if voice_person != "unknown":
-                print(f"[voice_id] Speaker: {voice_person}", flush=True)
-
         set_face("thinking")
-
-        # Camera ID — wait for result
-        camera_person = collect_identify(id_thread)
-
-        # Camera wins if it got someone, otherwise fall back to voice
-        if camera_person:
-            person = camera_person
-            print(f"[identify] Camera: {person}", flush=True)
-        elif voice_person != "unknown":
-            person = voice_person
-            print(f"[identify] Voice fallback: {person}", flush=True)
-        else:
-            person = ""
+        person = ""
 
         response = handle_turn(user_input, conversations, project_memory=project_memory, lived_memory=lived_memory, rooms=rooms, person=person)
         append_lived_memory(user_input, response, person=person)
