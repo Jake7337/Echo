@@ -79,9 +79,10 @@ def save_memory(conversations: list):
     with open(MEMORY_FILE, "w", encoding="utf-8") as f:
         json.dump({"conversations": conversations}, f, indent=2)
 
-def add_exchange(conversations: list, user: str, echo: str) -> list:
+def add_exchange(conversations: list, speaker: str, user: str, echo: str) -> list:
     conversations.append({
         "ts": datetime.now().isoformat(),
+        "speaker": speaker,
         "user": user,
         "echo": echo,
     })
@@ -93,7 +94,7 @@ def build_history_text(conversations: list) -> str:
         return ""
     lines = []
     for turn in recent:
-        lines.append(f"{turn.get('speaker', 'Jake')}: {turn['user']}")
+        lines.append(f"{turn.get('speaker', 'someone')}: {turn['user']}")
         lines.append(f"Echo: {turn['echo']}")
     return "\n".join(lines)
 
@@ -188,9 +189,7 @@ async def on_message(message):
     async with message.channel.typing():
         conversations = load_memory()
         response = handle_turn(speaker, content, conversations)
-        conversations = add_exchange(conversations, content, response)
-        # Tag the speaker so memory knows who said what
-        conversations[-1]["speaker"] = speaker
+        conversations = add_exchange(conversations, speaker, content, response)
         save_memory(conversations)
         # Fire scribe — Discord conversations build memory rooms just like voice does
         memory_scribe.observe(content, response)

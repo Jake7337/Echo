@@ -165,39 +165,6 @@ async def capture_event(blink, camera_name: str, thumbnail_url: str = None) -> d
     return event
 
 
-# ── Clip retry — grab clip if it wasn't ready at capture time ─────────────────
-
-async def retry_clip(event: dict, blink, max_wait: int = 30) -> dict:
-    """
-    If the clip wasn't ready at capture time, try once more after a short wait.
-    Pass the event dict returned by capture_event().
-    Returns updated event dict.
-    """
-    if event.get("clip"):
-        return event  # already have it
-
-    await asyncio.sleep(max_wait)
-
-    meta = await fetch_clip_metadata(blink, event["camera"])
-    clip_src = meta.get("clip_url", "")
-    if not clip_src:
-        return event
-
-    safe_name  = event["camera"].lower().replace(" ", "_")
-    dt_str     = datetime.fromtimestamp(event["timestamp"]).strftime("%Y-%m-%d_%H-%M-%S")
-    clip_path  = os.path.join(CLIP_DIR, f"{safe_name}_{dt_str}.mp4")
-
-    if await _download_via_blink(blink, clip_src, clip_path):
-        event["clip"] = clip_path
-        print(f"[capture] clip (retry) saved: {os.path.basename(clip_path)}", flush=True)
-        # Update the event file
-        if event.get("event_file"):
-            with open(event["event_file"], "w") as f:
-                json.dump({k: v for k, v in event.items() if k != "event_file"}, f, indent=2)
-
-    return event
-
-
 # ── Cache cleanup ─────────────────────────────────────────────────────────────
 
 def cleanup_cache(max_age: int = CACHE_MAX_AGE):

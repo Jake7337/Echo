@@ -8,6 +8,7 @@ import io
 import json
 import os
 import sys
+import time
 import wave
 import socket
 import subprocess
@@ -20,7 +21,6 @@ os.environ["JACK_NO_AUDIO_RESERVATION"] = "1"
 os.environ["AUDIODEV"] = "hw:4,0"
 import numpy as np
 import speech_recognition as sr
-from piper import PiperVoice
 from datetime import datetime
 
 
@@ -253,9 +253,8 @@ def build_history_text(conversations: list) -> str:
 
 # ── Voice ──────────────────────────────────────────────────────────────────────
 
-def speak(text: str, voice: PiperVoice = None):
+def speak(text: str):
     """Route speech through pi_speak server so audio device is owned in one place."""
-    import requests
     try:
         requests.post("http://127.0.0.1:5100/speak", json={"text": text}, timeout=90)
     except Exception as e:
@@ -264,10 +263,6 @@ def speak(text: str, voice: PiperVoice = None):
 
 def listen() -> tuple:
     """Listen for speech from the Fifine mic. Returns (text, audio_data) or (None, None)."""
-    import os
-    os.environ["JACK_NO_START_SERVER"] = "1"
-    os.environ["JACK_NO_AUDIO_RESERVATION"] = "1"
-
     r = sr.Recognizer()
     r.energy_threshold = 200
     r.pause_threshold = 1.0
@@ -331,7 +326,7 @@ def start_identify() -> threading.Thread:
     t.start()
     return t
 
-def collect_identify(t: threading.Thread, wait: float = 8.0) -> str:
+def collect_identify(t: threading.Thread, wait: float = 14.0) -> str:
     """Wait for identify thread to finish. Returns name or empty string."""
     t.join(timeout=wait)
     person = t.result_box[0] or "unknown"
@@ -366,44 +361,7 @@ def handle_turn(user_input: str, conversations: list, project_memory: str = "", 
 
 # ── Main loop ──────────────────────────────────────────────────────────────────
 
-
-DRIVE_KEYWORDS = {
-    "forward":    ("forward", 2),
-    "go forward": ("forward", 2),
-    "move forward": ("forward", 2),
-    "drive forward": ("forward", 2),
-    "backward":   ("backward", 2),
-    "go backward": ("backward", 2),
-    "reverse":    ("backward", 2),
-    "go back":    ("backward", 2),
-    "turn left":  ("left", 1.5),
-    "go left":    ("left", 1.5),
-    "turn right": ("right", 1.5),
-    "go right":   ("right", 1.5),
-    "stop":       ("stop", 0),
-    "stop moving": ("stop", 0),
-}
-
-def parse_drive_command(text):
-    t = text.lower().strip()
-    for phrase, (direction, duration) in DRIVE_KEYWORDS.items():
-        if phrase in t:
-            return direction, duration
-    return None, None
-
-def send_drive(direction, duration):
-    try:
-        requests.post(
-            f"{DRIVE_SERVER}/drive",
-            json={"direction": direction, "duration": duration},
-            timeout=3
-        )
-    except Exception as e:
-        print(f"[drive] Error: {e}")
-
 def main():
-    print("Loading voice...")
-    voice = PiperVoice.load(PIPER_MODEL)
     print("Loading project memory...")
     project_memory = load_project_memory()
     if project_memory:
@@ -411,8 +369,7 @@ def main():
     print("Loading lived memory...")
     lived_memory = load_lived_memory()
     if lived_memory:
-        entry_count = len(lived_memory.splitlines())
-        print(f"Lived memory loaded — {entry_count} entries.")
+        print(f"Lived memory loaded — {len(lived_memory.splitlines())} entries.")
     else:
         print("No lived memory yet — this is a fresh start.")
     print("Loading memory rooms...")
@@ -422,14 +379,13 @@ def main():
     else:
         print("No room memories yet.")
     print("Echo is here.\n")
-    speak("Echo is here.", voice)
+    speak("Echo is here.")
     conversations = load_memory()
 
     listening = False
     print("Press ENTER to toggle listening ON/OFF")
     print("Echo is standing by.\n")
 
-    import threading
     def toggle_listener():
         nonlocal listening
         while True:
@@ -442,21 +398,22 @@ def main():
                 print("\n[Echo OFF] Standing by.")
                 set_face("idle")
 
-    t = threading.Thread(target=toggle_listener, daemon=True)
-    t.start()
+    threading.Thread(target=toggle_listener, daemon=True).start()
 
     while True:
         try:
             if not listening:
-                import time; time.sleep(0.2)
+                time.sleep(0.2)
                 continue
 
+            # Fire face identification in background as soon as we start listening
+            id_thread = start_identify()
             user_input, audio_data = listen()
 
         except KeyboardInterrupt:
             print("\nGoodbye.")
             set_face("idle")
-            speak("Talk later.", voice)
+            speak("Talk later.")
             break
 
         if not user_input:
@@ -466,7 +423,7 @@ def main():
         if direction:
             print(f"[drive] {direction} for {duration}s")
             send_drive(direction, duration)
-            speak("On it.", voice)
+            speak("On it.")
             conversations = add_exchange(conversations, user_input, "On it.")
             save_memory(conversations)
             continue
@@ -474,18 +431,20 @@ def main():
         if user_input.lower() in ("quit", "exit", "bye"):
             print("Echo: Talk later.")
             set_face("idle")
-            speak("Talk later.", voice)
+            speak("Talk later.")
             break
 
         set_face("thinking")
-        person = ""
+        # Collect face ID result — by the time we've listened and processed STT,
+        # the 13s request has usually completed
+        person = collect_identify(id_thread)
 
         response = handle_turn(user_input, conversations, project_memory=project_memory, lived_memory=lived_memory, rooms=rooms, person=person)
         append_lived_memory(user_input, response, person=person)
         scribe_observe(user_input, response)
         print(f"Echo: {response}\n")
         set_face("talking")
-        speak(response, voice)
+        speak(response)
         set_face("idle")
 
         conversations = add_exchange(conversations, user_input, response)

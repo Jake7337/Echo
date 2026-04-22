@@ -191,29 +191,6 @@ def should_announce(camera_name: str, cv: list, description: str, last_announced
     # No cv data at all — announce generic motion (not quiet hours, not on cooldown)
     return True, f"Motion on {camera_name}."
 
-# ── cv_detection lookup ───────────────────────────────────────────────────────
-
-async def get_camera_event(blink, camera_name: str) -> tuple:
-    """Returns (cv_detection list, blink_description string)."""
-    from blinkpy import api as blink_api
-    try:
-        data = await blink_api.request_videos(blink, time=time.time() - 120, page=0)
-        if not isinstance(data, dict):
-            return [], ""
-        for item in data.get("media", []):
-            if item.get("device_name") == camera_name:
-                try:
-                    meta        = json.loads(item.get("metadata") or "{}")
-                    cv          = meta.get("cv_detection", [])
-                    description = (item.get("description", "") or
-                                   meta.get("description", "") or "")
-                    return cv, description.strip()
-                except Exception:
-                    return [], ""
-    except Exception:
-        pass
-    return [], ""
-
 # ── Blink setup ───────────────────────────────────────────────────────────────
 
 async def setup_blink():

@@ -1,3 +1,33 @@
+# Echo — Python dependencies
+# Install on the target system (Pi or PC) as appropriate.
+# Pi-specific packages are noted; everything else installs on both.
+
+# ── Core (all systems) ─────────────────────────────────────────────────────────
 requests
-python_speech_features
 numpy
+
+# ── Voice / Pi ─────────────────────────────────────────────────────────────────
+SpeechRecognition          # Google STT via speech_recognition
+piper-tts                  # Piper TTS engine (Pi — local fallback voice)
+openwakeword               # Wake word detection ("Hey Jarvis")
+scipy                      # Audio resampling (44.1kHz → 16kHz for wake word)
+python_speech_features     # MFCC features for voice identification
+pyaudio                    # Microphone access
+
+# ── XTTS voice server (laptop only) ───────────────────────────────────────────
+# Run in the 'xtts' conda env — use xtts_api_server package instead:
+#   pip install xtts-api-server
+# torch and torchaudio install separately via conda with CUDA support.
+
+# ── Discord (PC) ───────────────────────────────────────────────────────────────
+discord.py
+
+# ── Blink awareness (PC) ───────────────────────────────────────────────────────
+blinkpy
+
+# ── Face recognition (PC) ──────────────────────────────────────────────────────
+opencv-python              # echo_identify.py — LBPH face recognition
+
+# ── PC servers (echo_server.py, pi_speak.py, drive.py) ────────────────────────
+flask
+flask-socketio
