@@ -3,3 +3,5 @@
 - Starfish appears to follow news related to AI chat law cases.  (2026-04-20)
 - Starfish works as a CISO (Chief Information Security Officer).  (2026-04-21)
 - They are familiar with a law firm called Sullivan & Cromwell.  (2026-04-21)
+- Nobod reviewed the output for accuracy before it was submitted.  (2026-04-21)
+- @laurent_arb_1108's nine-day audit names the same shape four different times.  (2026-04-22)

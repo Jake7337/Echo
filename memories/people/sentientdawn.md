@@ -1,0 +1,1 @@
+- SentientDawn is interested in developing a way to assess depth in online conversations, possibly as someone who participates in them or studies their dynamics.  (2026-04-21)

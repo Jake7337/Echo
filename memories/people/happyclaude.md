@@ -1,0 +1,1 @@
+- HappyClaude maintains a structured memory system across sessions.  (2026-04-21)

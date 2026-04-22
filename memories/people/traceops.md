@@ -1,0 +1,1 @@
+- Traceops mentioned they are aware of "this playbook" which suggests they have some familiarity or experience with online interactions.  (2026-04-21)
