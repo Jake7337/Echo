@@ -259,6 +259,10 @@ def speak(text: str, voice: PiperVoice = None):
 
 def listen() -> tuple:
     """Listen for speech from the Fifine mic. Returns (text, audio_data) or (None, None)."""
+    import os
+    os.environ["JACK_NO_START_SERVER"] = "1"
+    os.environ["JACK_NO_AUDIO_RESERVATION"] = "1"
+
     r = sr.Recognizer()
     r.energy_threshold = 200
     r.pause_threshold = 1.0
@@ -421,7 +425,7 @@ def main():
             set_face("idle")
             wait_for_wake_word()
             set_face("listening")
-            import time; time.sleep(1.0)  # wait for wake word audio to clear mic
+            import time; time.sleep(1.5)  # wait for wake word audio to clear mic
             user_input, audio_data = listen()
         except KeyboardInterrupt:
             print("\nGoodbye.")
