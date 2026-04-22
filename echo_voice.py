@@ -272,7 +272,7 @@ def listen() -> tuple:
     r.energy_threshold = 200
     r.pause_threshold = 1.0
 
-    mic_index = MIC_CARD  # use fixed card index, skip slow device enumeration
+    mic_index = None  # use default device (set via /etc/asound.conf)
 
     try:
         with sr.Microphone(device_index=mic_index) as source:
