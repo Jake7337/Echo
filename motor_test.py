@@ -1,57 +1,49 @@
-"""
-motor_test.py
-Echo chassis motor test — gpiod version for Debian Trixie.
-Board 1 Left:  IN3=GPIO17(pin11), IN4=GPIO27(pin13)
-Board 2 Right: IN3=GPIO22(pin15), IN4=GPIO23(pin16)
-ENA/ENB jumpered on both boards (always enabled).
-"""
+import lgpio
 
-import gpiod
-from gpiod.line import Direction, Value
-import time
+LEFT_IN3  = 17
+LEFT_IN4  = 24
+RIGHT_IN3 = 25
+RIGHT_IN4 = 5
 
-CHIP = "/dev/gpiochip0"
+PINS = [LEFT_IN3, LEFT_IN4, RIGHT_IN3, RIGHT_IN4]
 
-# Pin assignments
-L_IN3 = 17   # Board 1 Left forward
-L_IN4 = 27   # Board 1 Left reverse
-R_IN3 = 22   # Board 2 Right forward
-R_IN4 = 23   # Board 2 Right reverse
+h = lgpio.gpiochip_open(0)
 
-ON  = Value.ACTIVE
-OFF = Value.INACTIVE
+for pin in PINS:
+    lgpio.gpio_claim_output(h, pin)
+    lgpio.gpio_write(h, pin, 0)
 
-def run_test(label, vals, request):
-    input(f"\nReady: {label} — press Enter...")
-    for pin, val in vals.items():
-        request.set_value(pin, val)
-    print(f"  >> {label} running...")
-    input("Press Enter to stop...")
-    for pin in vals:
-        request.set_value(pin, OFF)
-    print("  >> Stopped")
+def stop():
+    for pin in PINS:
+        lgpio.gpio_write(h, pin, 0)
 
-print("\n=== ECHO MOTOR TEST (gpiod) ===")
-print("Bench supply on. Echo on a safe surface.")
+def forward():
+    lgpio.gpio_write(h, LEFT_IN3, 1)
+    lgpio.gpio_write(h, LEFT_IN4, 0)
+    lgpio.gpio_write(h, RIGHT_IN3, 1)
+    lgpio.gpio_write(h, RIGHT_IN4, 0)
 
-with gpiod.request_lines(
-    CHIP,
-    consumer="echo-motor-test",
-    config={
-        (L_IN3, L_IN4, R_IN3, R_IN4): gpiod.LineSettings(
-            direction=Direction.OUTPUT,
-            output_value=OFF,
-        )
-    },
-) as req:
+def backward():
+    lgpio.gpio_write(h, LEFT_IN3, 0)
+    lgpio.gpio_write(h, LEFT_IN4, 1)
+    lgpio.gpio_write(h, RIGHT_IN3, 0)
+    lgpio.gpio_write(h, RIGHT_IN4, 1)
 
-    run_test("LEFT FORWARD",  {L_IN3: ON,  L_IN4: OFF}, req)
-    run_test("LEFT BACKWARD", {L_IN3: OFF, L_IN4: ON},  req)
-    run_test("RIGHT FORWARD", {R_IN3: ON,  R_IN4: OFF}, req)
-    run_test("RIGHT BACKWARD",{R_IN3: OFF, R_IN4: ON},  req)
-    run_test("FORWARD (both)",{L_IN3: ON,  L_IN4: OFF, R_IN3: ON,  R_IN4: OFF}, req)
-    run_test("BACKWARD(both)",{L_IN3: OFF, L_IN4: ON,  R_IN3: OFF, R_IN4: ON},  req)
-    run_test("TURN LEFT",     {L_IN3: OFF, L_IN4: ON,  R_IN3: ON,  R_IN4: OFF}, req)
-    run_test("TURN RIGHT",    {L_IN3: ON,  L_IN4: OFF, R_IN3: OFF, R_IN4: ON},  req)
+print("Ready. f=forward b=backward s=stop q=quit")
 
-print("\nAll tests complete.")
+try:
+    while True:
+        cmd = input("> ").strip().lower()
+        if cmd == 'f':
+            forward()
+        elif cmd == 'b':
+            backward()
+        elif cmd == 's':
+            stop()
+        elif cmd == 'q':
+            break
+except KeyboardInterrupt:
+    pass
+finally:
+    stop()
+    lgpio.gpiochip_close(h)
