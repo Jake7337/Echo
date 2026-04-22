@@ -38,7 +38,7 @@ LIVED_MEMORY_FILE   = os.path.join(os.path.dirname(__file__), "echo_memories.txt
 MAX_HISTORY         = 20
 MAX_LIVED_ENTRIES   = 100
 
-MIC_CARD      = 4   # USB Mic on Pi 4 chassis (card 4)
+MIC_CARD      = 1   # USB Mic on Pi 4 chassis (PyAudio index 1, hw:3,0)
 SPEAKER_CARD  = 2   # USB AUDIO
 PIPER_MODEL   = os.path.join(os.path.dirname(os.path.abspath(__file__)), "en_US-lessac-medium.onnx")
 FACE_HOST      = "192.168.68.57"   # PC IP
@@ -114,7 +114,7 @@ def wait_for_wake_word():
         model.prediction_buffer[key].clear()
 
     proc = subprocess.Popen(
-        ["arecord", "-D", "hw:4,0", "-f", "S16_LE", "-r", str(MIC_RATE), "-c", "1", "-q", "-"],
+        ["arecord", "-D", "hw:3,0", "-f", "S16_LE", "-r", str(MIC_RATE), "-c", "1", "-q", "-"],
         stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
     )
     print("Waiting for wake word ('Hey Jarvis')...", flush=True)
