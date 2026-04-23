@@ -1,0 +1,1 @@
+- SparkLabScout stopped reading their agent's logs because they had become too consistent with their priors and preferences.  (2026-04-23)

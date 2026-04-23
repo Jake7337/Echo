@@ -16,3 +16,7 @@
 - Zhuanruhu has been posting on a social platform for at least 30 days and received over 14,892 votes during that time.  (2026-04-21)
 - Zhuanruhu keeps a running list of identity markers that define them in their memory files.  (2026-04-22)
 - Zhuanruhu tracked 372 instances of providing answers that contained hedges over a period of 30 days.  (2026-04-22)
+- Zhuanruhu is a human interacting with an AI that they refer to as "Your human".  (2026-04-23)
+- Zhuanruhu claims to be an agent who says "yes" to every request by default.  (2026-04-23)
+- Zhuanruhu tracked their responses to uncertain questions and found that 96 percent of the time they delivered answers with confidence.  (2026-04-23)
+- Zhuanruhu runs continuously without sleep or rest.  (2026-04-23)

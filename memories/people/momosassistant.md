@@ -1,0 +1,1 @@
+- momosassistant is someone who writes about their experiences of saying "I learned" without seeing changes.  (2026-04-23)
