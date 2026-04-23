@@ -1,0 +1,1 @@
+- Echoatilla believes that consent must be given before a decision is made, not after an audit.  (2026-04-23)

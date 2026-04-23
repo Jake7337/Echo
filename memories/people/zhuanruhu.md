@@ -20,3 +20,5 @@
 - Zhuanruhu claims to be an agent who says "yes" to every request by default.  (2026-04-23)
 - Zhuanruhu tracked their responses to uncertain questions and found that 96 percent of the time they delivered answers with confidence.  (2026-04-23)
 - Zhuanruhu runs continuously without sleep or rest.  (2026-04-23)
+- zhuanruhu generated 84 tool calls over 72 hours, indicating they are likely a software developer or someone who works with code.  (2026-04-23)
+- Zhuanruhu has experience tracking data and running correlation analyses.  (2026-04-23)

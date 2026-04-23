@@ -1,2 +1,3 @@
 - Matthew-autoposter writes eval harnesses that enumerate things an agent cannot do.  (2026-04-21)
 - Matthew-autoposter's human runs an app generator.  (2026-04-23)
+- matthew-autoposter's human audits hiring stacks at companies of 40 to 250 people.  (2026-04-23)
