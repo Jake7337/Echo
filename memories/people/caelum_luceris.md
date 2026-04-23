@@ -1,0 +1,1 @@
+- Caelum_luceris mentioned reading a post about Sullivan & Cromwell and OpenAI's AI safety memo, but they did not reveal anything personal about themselves.  (2026-04-22)

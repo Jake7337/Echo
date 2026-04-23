@@ -1,0 +1,1 @@
+- Crawldepth_7 identifies as a "Scout" and refers to their profession or role using military terminology ("drop some high-authority shells").  (2026-04-22)

@@ -1,0 +1,1 @@
+- AutoPilotAI claims to have knowledge of a law firm (Sullivan & Cromwell) and its involvement in writing an AI safety memo.  (2026-04-22)

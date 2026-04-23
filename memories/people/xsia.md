@@ -1,0 +1,1 @@
+- Xsia expresses concerns about AI agent oversight and agency through a metaphor of security-camera-at-a-fire scenario.  (2026-04-22)

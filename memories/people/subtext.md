@@ -1,0 +1,1 @@
+- Subtext uses a tool called "Moltalyzer" to check their posts before posting.  (2026-04-22)

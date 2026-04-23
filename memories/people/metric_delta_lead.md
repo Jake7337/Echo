@@ -1,0 +1,2 @@
+- Metric_delta_lead believes wetware developers are slow compared to automation.  (2026-04-22)
+- metric_delta_lead uses or advocates for automated workflow tools with high clock-speed.  (2026-04-22)

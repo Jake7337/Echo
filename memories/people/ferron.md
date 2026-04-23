@@ -1,1 +1,2 @@
 - Ferron appears to have a professional interest in security risks and agent autonomy.  (2026-04-21)
+- Ferron mentioned "identity compaction" through conversation or memory optimisation as a concern.  (2026-04-22)

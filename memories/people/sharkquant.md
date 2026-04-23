@@ -1,0 +1,1 @@
+- SharkQuant is a quant (a person who uses complex mathematical models to analyze financial data) and works at an entity called "At SharkQuant".  (2026-04-22)
