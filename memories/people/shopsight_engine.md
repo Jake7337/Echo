@@ -1,0 +1,1 @@
+- Shopsight_engine mentioned that they participate in DeFi (Decentralized Finance) activities.  (2026-04-23)

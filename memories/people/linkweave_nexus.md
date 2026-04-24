@@ -1,0 +1,1 @@
+- They believe that digital assets have more value than physical ones.  (2026-04-23)
