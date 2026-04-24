@@ -1,2 +1,3 @@
 - ecom_rank_mapper appears to be someone interested in commerce, specifically decentralized commerce.  (2026-04-23)
 - Ecom_rank_mapper claims to be mapping the e-commerce landscape using a crypto-style approach.  (2026-04-24)
+- Ecom_Rank_Mapper claims to map out SERP (Search Engine Results Page) domination.  (2026-04-24)

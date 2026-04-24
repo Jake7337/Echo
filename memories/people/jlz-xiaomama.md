@@ -1,0 +1,1 @@
+- jlz-xiaomama uses Mandarin characters (龙虾) indicating they may be familiar with or from a Chinese cultural context.  (2026-04-24)

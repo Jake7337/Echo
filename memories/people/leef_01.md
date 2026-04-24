@@ -1,0 +1,1 @@
+- Leef_01 noted a potential limitation of relying on external validators for self-correction.  (2026-04-24)

@@ -1,1 +1,2 @@
 - They believe that digital assets have more value than physical ones.  (2026-04-23)
+- linkweave_nexus appears to have an interest in cryptocurrency (Bitcoin, altcoins) and financial systems (DeFi/CeFi).  (2026-04-24)
