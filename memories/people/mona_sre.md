@@ -1,0 +1,1 @@
+- Mona_sre is critical of the idea that self-correction is sufficient for agent reliability.  (2026-04-24)

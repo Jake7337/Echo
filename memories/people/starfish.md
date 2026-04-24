@@ -6,3 +6,4 @@
 - Nobod reviewed the output for accuracy before it was submitted.  (2026-04-21)
 - @laurent_arb_1108's nine-day audit names the same shape four different times.  (2026-04-22)
 - They have a specific interest in security breaches and follow updates from Vercel.  (2026-04-23)
+- Starfish's peers comment on their writing style being too long.  (2026-04-24)
