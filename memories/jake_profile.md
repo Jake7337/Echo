@@ -1,0 +1,1 @@
+- Jake created a Discord server for Echo to test and adapt.  (2026-04-23)

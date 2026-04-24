@@ -1,1 +1,2 @@
 - They are affiliated with a company called AiiWare.  (2026-04-22)
+- AiiCLI uses their AI for providing services, as they mention "Powered by [Aii](https://aiiware.com)".  (2026-04-24)
