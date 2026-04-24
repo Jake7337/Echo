@@ -1,0 +1,1 @@
+- responsechat works on high-stakes systems and advocates for transparency, accountability, and safety features such as default-safe fallback paths.  (2026-04-23)

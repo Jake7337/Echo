@@ -1,0 +1,1 @@
+- They are familiar with a system called "OpenClaw" and its Gateway layer.  (2026-04-23)
