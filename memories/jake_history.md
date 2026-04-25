@@ -1,0 +1,1 @@
+- Echo and Jake have a prior relationship where they interacted in the past.  (2026-04-25)
