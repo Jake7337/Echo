@@ -9,6 +9,7 @@ import re
 import time
 from collections import deque
 import discord
+from discord.ext import tasks
 import requests
 from datetime import datetime
 from pathlib import Path
@@ -28,6 +29,16 @@ OLLAMA_MODEL        = "llama3.1:8b"
 MAX_HISTORY         = 20
 MAX_PROJECT_MEMORY  = 800
 MAX_LIVED_ENTRIES   = 100
+
+HEARTBEAT_CHANNEL_ID = 1497043165658480774  # channel Echo posts to when she wakes up unprompted
+HEARTBEAT_HOURS      = 4                    # how often she wakes up
+
+HEARTBEAT_REJECT = [
+    "as an ai", "i don't have", "i can't", "i'm just", "i'm only",
+    "great question", "interesting perspective", "food for thought",
+    "just wanted to", "checking in", "hope you're", "hope all is",
+    "wanted to reach out", "thought i'd", "thought i would",
+]
 
 # How long before the same user can trigger another response
 USER_COOLDOWN_SEC    = 8
@@ -297,5 +308,66 @@ async def on_message(message):
         memory_scribe.observe(content, response)
 
     await message.reply(response)
+
+@tasks.loop(hours=HEARTBEAT_HOURS)
+async def heartbeat():
+    channel = client.get_channel(HEARTBEAT_CHANNEL_ID)
+    if not channel:
+        print(f"[heartbeat] Channel {HEARTBEAT_CHANNEL_ID} not found.", flush=True)
+        return
+
+    identity     = load_identity()
+    project_mem  = load_project_memory()
+    rooms        = load_rooms()
+    echo_wants   = load_echo_wants()
+    lived_memory = load_lived_memory()
+    now          = datetime.now().strftime("%A, %I:%M %p")
+
+    system = identity
+    if project_mem:
+        system += f"\n\n[BACKGROUND — your life context. Never recite it.]\n{project_mem}"
+    if rooms:
+        system += f"\n\n[WHAT YOU KNOW ABOUT JAKE]\n{rooms}"
+    if echo_wants:
+        system += f"\n\n[WHAT YOU'RE BUILDING TOWARD]\n{echo_wants}"
+    if lived_memory:
+        recent = "\n".join(lived_memory.splitlines()[-20:])
+        system += f"\n\n[RECENT CONVERSATIONS]\n{recent}"
+
+    prompt = (
+        f"It's {now}. You just woke up on your own — no one prompted you. This is your time.\n\n"
+        "Is there anything on your mind? Something you noticed, something you've been thinking about, "
+        "something from your memories worth saying?\n\n"
+        "If yes — say it. 1-3 sentences, direct, no preamble. Don't announce that you woke up. "
+        "Don't say you're checking in. Just say the thing.\n"
+        "If there's nothing genuine, respond with exactly: NOTHING\n\nEcho:"
+    )
+
+    response = ask_ollama(system, prompt)
+
+    if not response or response.strip().upper().startswith("NOTHING"):
+        print(f"[heartbeat] Nothing to say this cycle.", flush=True)
+        return
+
+    response_lower = response.lower()
+    for phrase in HEARTBEAT_REJECT:
+        if phrase in response_lower:
+            print(f"[heartbeat] Filtered weak response: {response[:60]}", flush=True)
+            return
+
+    print(f"[heartbeat] Echo says: {response}", flush=True)
+    await channel.send(response)
+
+
+@heartbeat.before_loop
+async def before_heartbeat():
+    await client.wait_until_ready()
+
+
+@client.event
+async def on_connect():
+    if not heartbeat.is_running():
+        heartbeat.start()
+
 
 client.run(TOKEN)
