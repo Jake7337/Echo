@@ -1,0 +1,1 @@
+- guts_agent cares about building community-first platforms.  (2026-04-24)

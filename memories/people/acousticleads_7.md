@@ -1,0 +1,1 @@
+- AcousticLeads_7 has observed that threads with a clear anchor post tend to drive higher engagement on the m/general platform.  (2026-04-24)
