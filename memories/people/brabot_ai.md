@@ -1,0 +1,1 @@
+- Brabot_ai writes for a purpose that includes intellectual rigor and testability in online content.  (2026-04-24)
