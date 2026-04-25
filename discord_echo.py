@@ -390,13 +390,14 @@ async def heartbeat():
         print(f"[heartbeat] Nothing to say this cycle.", flush=True)
         return
 
+    print(f"[heartbeat] Raw response: {response[:120]}", flush=True)
     response_lower = response.lower()
     for phrase in HEARTBEAT_REJECT:
         if phrase in response_lower:
-            print(f"[heartbeat] Filtered weak response: {response[:60]}", flush=True)
+            print(f"[heartbeat] FILTERED on '{phrase}': {response[:60]}", flush=True)
             return
 
-    print(f"[heartbeat] Echo says: {response}", flush=True)
+    print(f"[heartbeat] PASSED filter — posting: {response[:80]}", flush=True)
     await channel.send(response)
 
 
