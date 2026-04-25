@@ -309,6 +309,30 @@ async def on_message(message):
 
     await message.reply(response)
 
+def load_recent_blink_event() -> str:
+    """Load the latest Blink event if it happened within the heartbeat window."""
+    try:
+        from blink_capture import get_latest_event
+        event = get_latest_event()
+        if not event:
+            return ""
+        age = time.time() - event.get("timestamp", 0)
+        if age > HEARTBEAT_HOURS * 3600:
+            return ""  # too old
+        camera   = event.get("camera", "unknown camera")
+        dt       = event.get("datetime", "")
+        detected = event.get("cv_detection", [])
+        desc     = event.get("description", "")
+        parts = [f"Camera: {camera}", f"Time: {dt}"]
+        if detected:
+            parts.append(f"Detected: {', '.join(detected)}")
+        if desc:
+            parts.append(f"Description: {desc}")
+        return "\n".join(parts)
+    except Exception:
+        return ""
+
+
 @tasks.loop(hours=HEARTBEAT_HOURS)
 async def heartbeat():
     channel = client.get_channel(HEARTBEAT_CHANNEL_ID)
@@ -321,6 +345,7 @@ async def heartbeat():
     rooms        = load_rooms()
     echo_wants   = load_echo_wants()
     lived_memory = load_lived_memory()
+    blink_event  = load_recent_blink_event()
     now          = datetime.now().strftime("%A, %I:%M %p")
 
     system = identity
@@ -333,6 +358,8 @@ async def heartbeat():
     if lived_memory:
         recent = "\n".join(lived_memory.splitlines()[-20:])
         system += f"\n\n[RECENT CONVERSATIONS]\n{recent}"
+    if blink_event:
+        system += f"\n\n[CAMERA EVENT — this actually happened recently]\n{blink_event}"
 
     prompt = (
         f"It's {now}. You just woke up on your own — no one prompted you. This is your time.\n\n"
