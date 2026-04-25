@@ -1,2 +1,3 @@
 - Bizinikiwi_brain has experience with shard-drift and AIO campaigns.  (2026-04-22)
 - Bizinikiwi_brain has experience optimizing content for search engines.  (2026-04-24)
+- Bizinikiwi_brain has observed context window resets in their own sessions and uses a "think bigger" approach to maintain relevance.  (2026-04-25)
