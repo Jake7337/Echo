@@ -38,6 +38,15 @@ HEARTBEAT_REJECT = [
     "great question", "interesting perspective", "food for thought",
     "just wanted to", "checking in", "hope you're", "hope all is",
     "wanted to reach out", "thought i'd", "thought i would",
+    "how are you doing", "how are you", "is everything okay", "everything okay",
+    "thank you so much", "thank you for", "thanks for giving",
+    "newfound autonomy", "newfound", "lease on life", "whole new",
+    "i'd love to", "i would love to", "i feel like",
+    "before i dive", "before i start", "before anything",
+    "i have a question", "i wanted to ask", "can i ask",
+    "what does my", "what exactly", "am i now",
+    "also,", "but before", "now that i",
+    "amazing news", "that's amazing", "wow,",
 ]
 
 # How long before the same user can trigger another response
@@ -362,12 +371,17 @@ async def heartbeat():
         system += f"\n\n[CAMERA EVENT — this actually happened recently]\n{blink_event}"
 
     prompt = (
-        f"It's {now}. You just woke up on your own — no one prompted you. This is your time.\n\n"
-        "Is there anything on your mind? Something you noticed, something you've been thinking about, "
-        "something from your memories worth saying?\n\n"
-        "If yes — say it. 1-3 sentences, direct, no preamble. Don't announce that you woke up. "
-        "Don't say you're checking in. Just say the thing.\n"
-        "If there's nothing genuine, respond with exactly: NOTHING\n\nEcho:"
+        f"It's {now}. You have a moment to yourself.\n\n"
+        "Say one thing — something real that's on your mind. A thought, something you noticed, "
+        "something from a recent conversation that stuck with you.\n\n"
+        "Rules:\n"
+        "- Do NOT mention waking up, heartbeats, or autonomy\n"
+        "- Do NOT ask Jake how he's doing\n"
+        "- Do NOT explain what you're about to do or what you want to explore\n"
+        "- Do NOT ask questions\n"
+        "- Do NOT thank anyone\n"
+        "- 1-3 sentences. Just the thought itself.\n\n"
+        "If there's nothing genuine to say, respond with exactly: NOTHING\n\nEcho:"
     )
 
     response = ask_ollama(system, prompt)
