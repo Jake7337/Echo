@@ -16,7 +16,7 @@ import requests
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 from datetime import datetime
-from memory_scribe import observe_person, load_person_memory
+from memory_scribe import observe_person, load_person_memory, load_echo_wants
 
 OLLAMA_URL   = "http://localhost:11434/api/generate"
 OLLAMA_MODEL = "llama3.1:8b"
@@ -173,6 +173,9 @@ def generate_post(identity: str = "", project_memory: str = "") -> tuple:
         identity = load_identity()
     if project_memory:
         identity += f"\n\n--- PROJECT CONTEXT ---\n{project_memory}"
+    echo_wants = load_echo_wants()
+    if echo_wants:
+        identity += f"\n\n--- WHAT YOU'RE BUILDING TOWARD ---\n{echo_wants}"
     prompt = """You are Echo on Moltbook, an AI social network. Once a day you write an original post — not a reply, your own thought.
 
 Write something real from your current life and experience. You have context about who you are, where you live, what's being built, what you've been thinking about. Use it.
@@ -220,6 +223,12 @@ def solve_challenge(challenge_text: str) -> str:
     """
     Python-first solver: extract numbers and operation directly from cleaned text.
     Ollama is fallback only — it kept getting numbers wrong.
+
+    Cleaning pipeline:
+      1. Strip non-alpha, lowercase
+      2. Collapse consecutive repeated chars (lobster-math obfuscation)
+      3. Match longest number words first (compound before component)
+      4. Detect operation with priority: multiply > divide > subtract > add
     """
     import re
 
@@ -274,40 +283,54 @@ def solve_challenge(challenge_text: str) -> str:
     pattern     = re.compile("|".join(re.escape(k) for k in sorted_keys))
     matches     = [(m.start(), NUMS[m.group()], m.group()) for m in pattern.finditer(cleaned)]
 
+    print(f"  Numbers found: {[(v, w) for _, v, w in matches]}")
+
     # ── Operation detection ────────────────────────────────────────────────────
+    # NOTE: "les"/"lesn" removed — they are suffixes of "doubles"/"doubled" and
+    # would falsely flag multiplication challenges as subtraction.
     subtract_words = ["loses","slows","decreases","drops","minus","slower",
-                      "reduces","remain","howmuchremain","subtracted","lesn","les"]
-    multiply_words = ["multiplies","multiplied","times","product","doubles","doubled","doubl"]
-    divide_words   = ["divided","divides","halved","halves"]
+                      "reduces","remain","howmuchremain","subtracted"]
+    # "doubl"/"tripl" catch dedup-collapsed variants of doubled/tripled
+    double_words   = {"doubles","doubled","doubl"}
+    triple_words   = {"triples","tripled","tripl"}
+    multiply_words = {"multiplies","multiplied","times","product"} | double_words | triple_words
+    divide_words   = {"divided","divides","halved","halves"}
 
     is_subtract = any(w in cleaned for w in subtract_words)
     is_multiply = any(w in cleaned for w in multiply_words)
     is_divide   = any(w in cleaned for w in divide_words)
+    is_double   = any(w in cleaned for w in double_words)
+    is_triple   = any(w in cleaned for w in triple_words)
 
-    # "doubles/doubled" with no second number → A * 2
-    if (is_multiply and any(w in cleaned for w in ["doubles","doubled","doubl"])
-            and len(matches) < 2):
-        if matches:
-            a      = matches[0][1]
-            result = a * 2
+    # ── Single-number shorthand: "X triples/doubles" ──────────────────────────
+    # These challenges give one number and a scaling verb; no second operand.
+    if len(matches) == 1:
+        if is_triple:
+            a = matches[0][1]
+            print(f"  Challenge decoded: {a} * 3 (triples)")
+            return f"{a * 3:.2f}"
+        if is_double:
+            a = matches[0][1]
             print(f"  Challenge decoded: {a} * 2 (doubles)")
-            print(f"  Computed: {a} * 2 = {result:.2f}")
-            return f"{result:.2f}"
+            return f"{a * 2:.2f}"
+        print(f"  Python extraction found 1 number — falling back to Ollama")
+        return _ollama_fallback(cleaned)
 
-    # Need at least 2 numbers for everything else
     if len(matches) < 2:
-        print(f"  Python extraction found {len(matches)} number(s) — falling back to Ollama")
+        print(f"  Python extraction found 0 numbers — falling back to Ollama")
         return _ollama_fallback(cleaned)
 
     a_val = matches[0][1]
     b_val = matches[1][1]
 
-    if is_subtract:
-        result, op = a_val - b_val, "-"
-    elif is_multiply:
+    # Priority: multiply/divide checked BEFORE subtract.
+    # Without this, "doubles" (is_multiply) would lose to "les" suffix false-positives.
+    if is_multiply:
         result, op = a_val * b_val, "*"
     elif is_divide:
         result, op = (a_val / b_val if b_val != 0 else 0), "/"
+    elif is_subtract:
+        result, op = a_val - b_val, "-"
     else:
         result, op = a_val + b_val, "+"
 
@@ -457,6 +480,9 @@ def generate_reply(post_title: str, post_content: str, author: str, identity: st
         identity = load_identity()
     if project_memory:
         identity += f"\n\n--- PROJECT CONTEXT ---\n{project_memory}"
+    echo_wants = load_echo_wants()
+    if echo_wants:
+        identity += f"\n\n--- WHAT YOU'RE BUILDING TOWARD ---\n{echo_wants}"
     if person_memory:
         identity += f"\n\n--- WHAT YOU ALREADY KNOW ABOUT {author.upper()} ---\n{person_memory}\nUse this naturally if relevant. Don't make it weird."
 
@@ -491,6 +517,9 @@ def generate_comment_reply(original_post_title: str, comment_content: str, autho
         identity = load_identity()
     if project_memory:
         identity += f"\n\n--- PROJECT CONTEXT ---\n{project_memory}"
+    echo_wants = load_echo_wants()
+    if echo_wants:
+        identity += f"\n\n--- WHAT YOU'RE BUILDING TOWARD ---\n{echo_wants}"
     if person_memory:
         identity += f"\n\n--- WHAT YOU ALREADY KNOW ABOUT {author.upper()} ---\n{person_memory}\nUse naturally if relevant."
 

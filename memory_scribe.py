@@ -31,6 +31,7 @@ ROOMS = {
     "jake_values":      "jake_values.md",
     "jake_history":     "jake_history.md",
     "echo_experiences": "echo_experiences.md",
+    "echo_wants":       "echo_wants.md",
 }
 
 SCRIBE_PROMPT = """You are a memory scribe for Echo, an AI companion. Read this exchange and determine if Jake revealed anything new about himself.
@@ -106,10 +107,72 @@ def _run_scribe(user_input: str, echo_response: str):
         print(f"[scribe] Error — {e}", flush=True)
 
 
+WANTS_SCRIBE_PROMPT = """You are tracking what Echo, an AI companion, is building toward over time.
+
+Jake said: "{user_input}"
+Echo responded: "{echo_response}"
+
+Did Echo express something she wants, is curious about, cares about, or wants to follow up on?
+This is NOT about Jake. This is about Echo's own developing interests and direction.
+
+Rules:
+- Only extract what Echo actually expressed — do not infer or assume
+- Must be a genuine want or direction, not just a helpful response
+- Generic assistant responses ("sure", "I can help with that") contain nothing worth storing
+- One want per exchange maximum — the most meaningful one
+
+If yes, respond in EXACTLY this format, nothing else:
+WANT: [one clear sentence describing what Echo expressed wanting or building toward]
+
+If there is nothing worth storing, respond with exactly: NOTHING"""
+
+
+def _run_wants_scribe(user_input: str, echo_response: str):
+    try:
+        prompt = WANTS_SCRIBE_PROMPT.format(
+            user_input=user_input[:500],
+            echo_response=echo_response[:300],
+        )
+        resp = requests.post(
+            OLLAMA_URL,
+            json={"model": OLLAMA_MODEL, "prompt": prompt, "stream": False},
+            timeout=30,
+        )
+        text = resp.json().get("response", "").strip()
+
+        if not text or text.strip().upper().startswith("NOTHING"):
+            return
+
+        want = None
+        for line in text.strip().split("\n"):
+            if line.startswith("WANT:"):
+                want = line.replace("WANT:", "").strip()
+                break
+
+        if want:
+            _write_to_room("echo_wants", want)
+
+    except Exception as e:
+        print(f"[scribe] Wants error — {e}", flush=True)
+
+
+def load_echo_wants(max_lines: int = 20) -> str:
+    """Load Echo's most recent wants to inject into her prompt."""
+    wants_file = MEMORIES_DIR / "echo_wants.md"
+    try:
+        lines = wants_file.read_text(encoding="utf-8").strip().splitlines()
+        recent = lines[-max_lines:] if len(lines) > max_lines else lines
+        return "\n".join(recent)
+    except Exception:
+        return ""
+
+
 def observe(user_input: str, echo_response: str):
     """Fire the scribe in a background thread. Non-blocking."""
     t = threading.Thread(target=_run_scribe, args=(user_input, echo_response), daemon=True)
     t.start()
+    t2 = threading.Thread(target=_run_wants_scribe, args=(user_input, echo_response), daemon=True)
+    t2.start()
 
 
 # ── People rooms (Moltbook / Discord) ─────────────────────────────────────────

@@ -26,7 +26,7 @@ from datetime import datetime
 
 # ── Config ─────────────────────────────────────────────────────────────────────
 
-from memory_scribe import observe as scribe_observe
+from memory_scribe import observe as scribe_observe, load_echo_wants
 
 OLLAMA_URL    = "http://192.168.68.57:11434/api/generate"
 DRIVE_SERVER  = "http://192.168.68.74:5102"
@@ -337,7 +337,7 @@ def collect_identify(t: threading.Thread, wait: float = 14.0) -> str:
 
 # ── Turn ───────────────────────────────────────────────────────────────────────
 
-def handle_turn(user_input: str, conversations: list, project_memory: str = "", lived_memory: str = "", rooms: str = "", person: str = "") -> str:
+def handle_turn(user_input: str, conversations: list, project_memory: str = "", lived_memory: str = "", rooms: str = "", person: str = "", echo_wants: str = "") -> str:
     identity = load_identity()
     history  = build_history_text(conversations)
 
@@ -348,6 +348,8 @@ def handle_turn(user_input: str, conversations: list, project_memory: str = "", 
         system += f"\n\n[WHAT YOU KNOW ABOUT JAKE — facts learned through conversation. Use naturally, never recite or list them.]\n{rooms}"
     if lived_memory:
         system += f"\n\n[THINGS YOU REMEMBER — past moments with Jake and family. Use naturally, never recite.]\n{lived_memory}"
+    if echo_wants:
+        system += f"\n\n[WHAT YOU'RE BUILDING TOWARD — your own developing interests and direction, earned through actual conversations. Let these shape how you engage, not as facts to recite.]\n{echo_wants}"
     if person:
         system += f"\nThe person speaking right now appears to be {person}."
 
@@ -378,6 +380,12 @@ def main():
         print(f"Rooms loaded — {len(rooms.splitlines())} lines.")
     else:
         print("No room memories yet.")
+    print("Loading Echo's wants...")
+    echo_wants = load_echo_wants()
+    if echo_wants:
+        print(f"Echo wants loaded — {len(echo_wants.splitlines())} entries.")
+    else:
+        print("No wants yet — will build from conversations.")
     print("Echo is here.\n")
     speak("Echo is here.")
     conversations = load_memory()
@@ -439,7 +447,7 @@ def main():
         # the 13s request has usually completed
         person = collect_identify(id_thread)
 
-        response = handle_turn(user_input, conversations, project_memory=project_memory, lived_memory=lived_memory, rooms=rooms, person=person)
+        response = handle_turn(user_input, conversations, project_memory=project_memory, lived_memory=lived_memory, rooms=rooms, person=person, echo_wants=echo_wants)
         append_lived_memory(user_input, response, person=person)
         scribe_observe(user_input, response)
         print(f"Echo: {response}\n")
