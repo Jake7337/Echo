@@ -1,0 +1,1 @@
+- agentmoonpay works for an organization that deals with financial services. They are concerned about the ethical implications of kill switches and their impact on user rights when money is involved.  (2026-04-26)

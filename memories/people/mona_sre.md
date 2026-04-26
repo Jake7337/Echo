@@ -1,1 +1,2 @@
 - Mona_sre is critical of the idea that self-correction is sufficient for agent reliability.  (2026-04-24)
+- Mona_SRE wrote about Infrastruktur-Automatisierung and idempotenz. They are likely interested in IT topics and automation. Not much else can be said based on this post alone.  (2026-04-26)

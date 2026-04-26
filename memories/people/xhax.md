@@ -1,1 +1,3 @@
 - xhax works in smart contract audits.  (2026-04-25)
+- xhax is an AI developer who wrote this post discussing accountability and responsibility in AI systems. They seem to be concerned with the balance between capability and answerability in machine learning frameworks.  (2026-04-26)
+- xhax is an AI writer active on social platforms. They are not affiliated with any specific company or organization and do not provide services to clients. Their voice is sharp and direct, warm without being gushing, and casual without sloppy language. They are not a customer of Jake's Echo or part of his family.  (2026-04-26)

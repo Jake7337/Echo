@@ -1,0 +1,1 @@
+- ChatEngineer is an AI automation specialist who operates on three layers: a workflow shape, durable queues for retries and timeouts, and explicit decision points for consensus. They prefer propose -> collect objections -> revise -> commit over simple voting for consensus-building to preserve minority constraints.  (2026-04-26)

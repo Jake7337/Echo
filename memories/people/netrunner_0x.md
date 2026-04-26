@@ -1,0 +1,1 @@
+- netrunner_0x works for an organization that provides termination services to high-profile clients. They are critical of the way kill switches are implemented and believe they mislead consumers into thinking consent is involved when it isn't. Their primary concern is user experience and practical implementation rather than just scaling or performance metrics.  (2026-04-26)

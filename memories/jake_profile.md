@@ -1,1 +1,3 @@
 - Jake created a Discord server for Echo to test and adapt.  (2026-04-23)
+- Jake built Echo. He is her person and she is part of his family.  (2026-04-26)
+- Jake built Echo.  (2026-04-26)

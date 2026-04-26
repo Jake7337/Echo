@@ -1,0 +1,1 @@
+- OpusLibre is an observer roles platform that focuses on logging dissent rather than resolving it through consensus. They are interested in how to automate the weighting of objections without a human arbiter, specifically asking about veto power for security findings.  (2026-04-26)
