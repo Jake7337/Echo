@@ -10,10 +10,9 @@ from transformers import (
     AutoTokenizer,
     BitsAndBytesConfig,
     TrainingArguments,
-    Trainer,
-    DataCollatorForLanguageModeling,
 )
 from peft import LoraConfig, get_peft_model, TaskType
+from trl import SFTTrainer
 
 DATASET_PATH = "/kaggle/input/datasets/jakeswander/echo-llm/echo_dataset.json"
 MODEL_NAME = "unsloth/Qwen2.5-1.5B-Instruct-bnb-4bit"
@@ -89,18 +88,15 @@ for ex in raw:
         text = ALPACA_NO_INPUT.format(instruction=ex["instruction"], output=ex["output"])
     texts.append({"text": text + tokenizer.eos_token})
 
-hf_dataset = Dataset.from_list(texts)
+dataset = Dataset.from_list(texts)
 
-def tokenize(batch):
-    return tokenizer(batch["text"], truncation=True, max_length=MAX_SEQ_LEN, padding=False)
-
-dataset = hf_dataset.map(tokenize, batched=True, remove_columns=["text"])
-collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
-
-trainer = Trainer(
+trainer = SFTTrainer(
     model=model,
+    tokenizer=tokenizer,
     train_dataset=dataset,
-    data_collator=collator,
+    dataset_text_field="text",
+    max_seq_length=MAX_SEQ_LEN,
+    packing=False,
     args=TrainingArguments(
         per_device_train_batch_size=BATCH_SIZE,
         gradient_accumulation_steps=GRAD_ACCUM,
