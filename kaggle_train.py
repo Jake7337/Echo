@@ -4,6 +4,7 @@ import torch
 import glob
 os.environ["PYTORCH_ALLOC_CONF"] = "expandable_segments:True"
 
+from datasets import Dataset
 from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
@@ -13,7 +14,6 @@ from transformers import (
     DataCollatorForLanguageModeling,
 )
 from peft import LoraConfig, get_peft_model, TaskType
-from torch.utils.data import Dataset as TorchDataset
 
 DATASET_PATH = "/kaggle/input/datasets/jakeswander/echo-llm/echo_dataset.json"
 MODEL_NAME = "unsloth/Qwen2.5-1.5B-Instruct-bnb-4bit"
@@ -81,32 +81,20 @@ with open(DATASET_PATH, "r", encoding="utf-8") as f:
     raw = json.load(f)
 print(f"Examples: {len(raw)}")
 
-class EchoDataset(TorchDataset):
-    def __init__(self, data, tokenizer, max_len):
-        self.data = data
-        self.tokenizer = tokenizer
-        self.max_len = max_len
+texts = []
+for ex in raw:
+    if ex["input"].strip():
+        text = ALPACA.format(instruction=ex["instruction"], input=ex["input"], output=ex["output"])
+    else:
+        text = ALPACA_NO_INPUT.format(instruction=ex["instruction"], output=ex["output"])
+    texts.append({"text": text + tokenizer.eos_token})
 
-    def __len__(self):
-        return len(self.data)
+hf_dataset = Dataset.from_list(texts)
 
-    def __getitem__(self, idx):
-        ex = self.data[idx]
-        if ex["input"].strip():
-            text = ALPACA.format(instruction=ex["instruction"], input=ex["input"], output=ex["output"])
-        else:
-            text = ALPACA_NO_INPUT.format(instruction=ex["instruction"], output=ex["output"])
-        text += self.tokenizer.eos_token
-        enc = self.tokenizer(
-            text,
-            max_length=self.max_len,
-            truncation=True,
-            padding=False,
-            return_tensors=None,
-        )
-        return enc
+def tokenize(batch):
+    return tokenizer(batch["text"], truncation=True, max_length=MAX_SEQ_LEN, padding=False)
 
-dataset = EchoDataset(raw, tokenizer, MAX_SEQ_LEN)
+dataset = hf_dataset.map(tokenize, batched=True, remove_columns=["text"])
 collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
 
 trainer = Trainer(
