@@ -104,7 +104,6 @@ class EchoDataset(TorchDataset):
             padding=False,
             return_tensors=None,
         )
-        enc["labels"] = enc["input_ids"].copy()
         return enc
 
 dataset = EchoDataset(raw, tokenizer, MAX_SEQ_LEN)
