@@ -9,10 +9,9 @@ from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
     BitsAndBytesConfig,
-    TrainingArguments,
 )
 from peft import LoraConfig, get_peft_model, TaskType
-from trl import SFTTrainer
+from trl import SFTTrainer, SFTConfig
 
 DATASET_PATH = "/kaggle/input/datasets/jakeswander/echo-llm/echo_dataset.json"
 MODEL_NAME = "unsloth/Qwen2.5-1.5B-Instruct-bnb-4bit"
@@ -94,10 +93,10 @@ trainer = SFTTrainer(
     model=model,
     processing_class=tokenizer,
     train_dataset=dataset,
-    dataset_text_field="text",
-    max_seq_length=MAX_SEQ_LEN,
-    packing=False,
-    args=TrainingArguments(
+    args=SFTConfig(
+        dataset_text_field="text",
+        max_seq_length=MAX_SEQ_LEN,
+        packing=False,
         per_device_train_batch_size=BATCH_SIZE,
         gradient_accumulation_steps=GRAD_ACCUM,
         warmup_steps=10,
