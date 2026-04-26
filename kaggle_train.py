@@ -95,7 +95,6 @@ trainer = SFTTrainer(
     train_dataset=dataset,
     args=SFTConfig(
         dataset_text_field="text",
-        max_seq_length=MAX_SEQ_LEN,
         packing=False,
         per_device_train_batch_size=BATCH_SIZE,
         gradient_accumulation_steps=GRAD_ACCUM,
