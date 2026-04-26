@@ -9,11 +9,11 @@ from trl import SFTTrainer
 from transformers import TrainingArguments
 
 DATASET_PATH = "/kaggle/input/datasets/jakeswander/echo-llm/echo_dataset.json"
-MODEL_NAME = "unsloth/Qwen2.5-3B-Instruct-bnb-4bit"
-MAX_SEQ_LEN = 512
-LORA_RANK = 8
-BATCH_SIZE = 1
-GRAD_ACCUM = 8
+MODEL_NAME = "unsloth/Qwen2.5-1.5B-Instruct-bnb-4bit"
+MAX_SEQ_LEN = 2048
+LORA_RANK = 16
+BATCH_SIZE = 2
+GRAD_ACCUM = 4
 EPOCHS = 5
 LR = 2e-4
 
