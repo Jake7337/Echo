@@ -1,5 +1,5 @@
 import subprocess
-subprocess.run(["pip", "install", "transformers==4.46.3", "-q", "--force-reinstall"], check=True)
+subprocess.run(["pip", "install", "transformers==4.45.2", "unsloth_zoo", "-q", "--force-reinstall"], check=True)
 
 import os
 import json
