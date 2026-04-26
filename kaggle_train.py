@@ -1,15 +1,19 @@
-import subprocess
-subprocess.run(["pip", "install", "transformers==4.45.2", "unsloth_zoo", "-q", "--force-reinstall"], check=True)
-
 import os
 import json
 import torch
+import glob
 os.environ["PYTORCH_ALLOC_CONF"] = "expandable_segments:True"
 
-from datasets import Dataset
-from unsloth import FastLanguageModel
-from trl import SFTTrainer
-from transformers import TrainingArguments
+from transformers import (
+    AutoModelForCausalLM,
+    AutoTokenizer,
+    BitsAndBytesConfig,
+    TrainingArguments,
+    Trainer,
+    DataCollatorForLanguageModeling,
+)
+from peft import LoraConfig, get_peft_model, TaskType
+from torch.utils.data import Dataset as TorchDataset
 
 DATASET_PATH = "/kaggle/input/datasets/jakeswander/echo-llm/echo_dataset.json"
 MODEL_NAME = "unsloth/Qwen2.5-1.5B-Instruct-bnb-4bit"
@@ -42,58 +46,82 @@ ALPACA_NO_INPUT = """Below is an instruction that describes who you are. Write a
 print(f"GPU: {torch.cuda.get_device_name(0)}")
 print(f"VRAM: {torch.cuda.get_device_properties(0).total_memory / 1e9:.1f} GB")
 
-model, tokenizer = FastLanguageModel.from_pretrained(
-    model_name=MODEL_NAME,
-    max_seq_length=MAX_SEQ_LEN,
-    dtype=None,
-    load_in_4bit=True,
-    offload_buffers=True,
-)
-EOS = tokenizer.eos_token
+dtype = torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
 
-model = FastLanguageModel.get_peft_model(
-    model,
-    r=LORA_RANK,
-    target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"],
-    lora_alpha=16,
-    lora_dropout=0,
-    bias="none",
-    use_gradient_checkpointing="unsloth",
-    random_state=42,
+bnb_config = BitsAndBytesConfig(
+    load_in_4bit=True,
+    bnb_4bit_use_double_quant=True,
+    bnb_4bit_quant_type="nf4",
+    bnb_4bit_compute_dtype=dtype,
 )
+
+print("Loading model...")
+model = AutoModelForCausalLM.from_pretrained(
+    MODEL_NAME,
+    quantization_config=bnb_config,
+    device_map="auto",
+    torch_dtype=dtype,
+)
+tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+tokenizer.pad_token = tokenizer.eos_token
+
+lora_config = LoraConfig(
+    r=LORA_RANK,
+    lora_alpha=16,
+    target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"],
+    lora_dropout=0.0,
+    bias="none",
+    task_type=TaskType.CAUSAL_LM,
+)
+model = get_peft_model(model, lora_config)
+model.enable_input_require_grads()
+model.print_trainable_parameters()
 
 with open(DATASET_PATH, "r", encoding="utf-8") as f:
     raw = json.load(f)
 print(f"Examples: {len(raw)}")
 
-def fmt(examples):
-    texts = []
-    for instr, inp, out in zip(examples["instruction"], examples["input"], examples["output"]):
-        if inp.strip():
-            t = ALPACA.format(instruction=instr, input=inp, output=out)
+class EchoDataset(TorchDataset):
+    def __init__(self, data, tokenizer, max_len):
+        self.data = data
+        self.tokenizer = tokenizer
+        self.max_len = max_len
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        ex = self.data[idx]
+        if ex["input"].strip():
+            text = ALPACA.format(instruction=ex["instruction"], input=ex["input"], output=ex["output"])
         else:
-            t = ALPACA_NO_INPUT.format(instruction=instr, output=out)
-        texts.append(t + EOS)
-    return {"text": texts}
+            text = ALPACA_NO_INPUT.format(instruction=ex["instruction"], output=ex["output"])
+        text += self.tokenizer.eos_token
+        enc = self.tokenizer(
+            text,
+            max_length=self.max_len,
+            truncation=True,
+            padding=False,
+            return_tensors=None,
+        )
+        enc["labels"] = enc["input_ids"].copy()
+        return enc
 
-dataset = Dataset.from_list(raw).map(fmt, batched=True)
+dataset = EchoDataset(raw, tokenizer, MAX_SEQ_LEN)
+collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
 
-trainer = SFTTrainer(
+trainer = Trainer(
     model=model,
-    tokenizer=tokenizer,
     train_dataset=dataset,
-    dataset_text_field="text",
-    max_seq_length=MAX_SEQ_LEN,
-    dataset_num_proc=2,
-    packing=False,
+    data_collator=collator,
     args=TrainingArguments(
         per_device_train_batch_size=BATCH_SIZE,
         gradient_accumulation_steps=GRAD_ACCUM,
         warmup_steps=10,
         num_train_epochs=EPOCHS,
         learning_rate=LR,
-        fp16=not torch.cuda.is_bf16_supported(),
-        bf16=torch.cuda.is_bf16_supported(),
+        fp16=(dtype == torch.float16),
+        bf16=(dtype == torch.bfloat16),
         logging_steps=10,
         optim="adamw_8bit",
         weight_decay=0.01,
@@ -101,6 +129,7 @@ trainer = SFTTrainer(
         output_dir="/kaggle/working/echo_lora",
         save_strategy="epoch",
         report_to="none",
+        gradient_checkpointing=True,
     ),
 )
 
@@ -108,9 +137,16 @@ print("Training started...")
 trainer.train()
 print("Training complete.")
 
-print("Saving GGUF...")
-model.save_pretrained_gguf("/kaggle/working/echo_gguf", tokenizer, quantization_method="q4_k_m")
+print("Merging and saving model...")
+merged = trainer.model.merge_and_unload()
+merged.save_pretrained("/kaggle/working/echo_merged")
+tokenizer.save_pretrained("/kaggle/working/echo_merged")
+print("Merged model saved.")
 
-import glob
-candidates = glob.glob("/kaggle/working/**/*.gguf", recursive=True)
+print("Converting to GGUF...")
+os.system("git clone https://github.com/ggerganov/llama.cpp /kaggle/working/llama.cpp --depth 1 -q")
+os.system("pip install -r /kaggle/working/llama.cpp/requirements.txt -q")
+os.system("python /kaggle/working/llama.cpp/convert_hf_to_gguf.py /kaggle/working/echo_merged --outtype q4_k_m --outfile /kaggle/working/echo-finetuned.gguf")
+
+candidates = glob.glob("/kaggle/working/*.gguf")
 print(f"GGUF saved: {candidates}")
