@@ -5,7 +5,7 @@ os.environ["PYTORCH_ALLOC_CONF"] = "expandable_segments:True"
 
 from unsloth import FastLanguageModel
 from torch.utils.data import Dataset as TorchDataset
-from transformers import Trainer, TrainingArguments, DataCollatorForSeq2Seq
+from transformers import Trainer, TrainingArguments, DataCollatorForLanguageModeling
 
 DATASET_PATH = "/kaggle/input/datasets/jakeswander/echo-llm/echo_dataset.json"
 MODEL_NAME = "unsloth/Qwen2.5-1.5B-Instruct-bnb-4bit"
@@ -70,11 +70,10 @@ class EchoDataset(TorchDataset):
             padding=False,
             return_tensors=None,
         )
-        enc["labels"] = enc["input_ids"].copy()
         return enc
 
 dataset = EchoDataset(raw, tokenizer, MAX_SEQ_LEN)
-collator = DataCollatorForSeq2Seq(tokenizer, model=model, padding=True, pad_to_multiple_of=8)
+collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
 
 trainer = Trainer(
     model=model,
