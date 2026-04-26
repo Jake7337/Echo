@@ -9,6 +9,7 @@ Then open echo_gui.html in Chrome.
 """
 
 import os
+import re
 import json
 import time
 import subprocess
@@ -19,13 +20,17 @@ from flask import Flask, jsonify, request, send_from_directory
 from flask_socketio import SocketIO
 from flask_cors import CORS
 
-BASE_DIR        = os.path.dirname(os.path.abspath(__file__))
-CREDS_FILE      = os.path.join(BASE_DIR, "moltbook_creds.json")
-AWARENESS_FILE  = os.path.join(BASE_DIR, "awareness_config.json")
-IDENTITY_FILE = os.path.join(BASE_DIR, "identity.md")
-OLLAMA_URL    = "http://localhost:11434/api/generate"
-OLLAMA_MODEL  = "llama3.1:8b"
-MOLTBOOK_URL  = "https://www.moltbook.com/api/v1"
+BASE_DIR          = os.path.dirname(os.path.abspath(__file__))
+CREDS_FILE        = os.path.join(BASE_DIR, "moltbook_creds.json")
+AWARENESS_FILE    = os.path.join(BASE_DIR, "awareness_config.json")
+IDENTITY_FILE     = os.path.join(BASE_DIR, "identity.md")
+HEARTBEAT_FILE    = os.path.join(BASE_DIR, "latest_heartbeat.json")
+ECHO_MEMORY_FILE  = os.path.join(BASE_DIR, "Echo_Memory.txt")
+BLINK_EVENTS_DIR  = os.path.join(BASE_DIR, "cache", "blink", "events")
+BLINK_THUMBS_DIR  = os.path.join(BASE_DIR, "cache", "blink", "thumbs")
+OLLAMA_URL        = "http://localhost:11434/api/generate"
+OLLAMA_MODEL      = "echo"
+MOLTBOOK_URL      = "https://www.moltbook.com/api/v1"
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "echo-command-center"
@@ -326,6 +331,49 @@ def api_memory_backup():
 @app.route("/api/state")
 def api_state():
     return jsonify({"emotion": "warm", "baseline": "warm"})
+
+
+# ── Live feed routes ───────────────────────────────────────────────────────
+
+@app.route("/api/latest/heartbeat")
+def api_latest_heartbeat():
+    try:
+        with open(HEARTBEAT_FILE, encoding="utf-8") as f:
+            return jsonify(json.load(f))
+    except Exception:
+        return jsonify({"text": None, "timestamp": None})
+
+
+@app.route("/api/latest/scribe")
+def api_latest_scribe():
+    entries = []
+    try:
+        with open(ECHO_MEMORY_FILE, encoding="utf-8") as f:
+            lines = [l.rstrip() for l in f if l.strip()]
+        for line in lines[-20:]:
+            m = re.match(r'\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2})\]\s+\(([^)]+)\)\s+(.*)', line)
+            if m:
+                entries.append({"ts": m.group(1), "category": m.group(2), "fact": m.group(3)})
+            else:
+                entries.append({"ts": "", "category": "", "fact": line})
+    except Exception:
+        pass
+    return jsonify({"entries": entries})
+
+
+@app.route("/api/latest/blink")
+def api_latest_blink():
+    try:
+        event_file = os.path.join(BLINK_EVENTS_DIR, "latest_event.json")
+        with open(event_file, encoding="utf-8") as f:
+            return jsonify(json.load(f))
+    except Exception:
+        return jsonify({"camera": None, "datetime": None, "thumb": None})
+
+
+@app.route("/blink/thumb/<path:filename>")
+def serve_blink_thumb(filename):
+    return send_from_directory(BLINK_THUMBS_DIR, filename)
 
 
 # ── SocketIO ───────────────────────────────────────────────────────────────

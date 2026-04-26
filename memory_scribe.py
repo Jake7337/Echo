@@ -19,7 +19,7 @@ from datetime import date, datetime
 from pathlib import Path
 
 OLLAMA_URL   = "http://192.168.68.57:11434/api/generate"
-OLLAMA_MODEL = "llama3.1:8b"
+OLLAMA_MODEL = "echo"
 
 MEMORIES_DIR        = Path(os.path.dirname(os.path.abspath(__file__))) / "memories"
 PROJECT_MEMORY_FILE = Path(os.path.dirname(os.path.abspath(__file__))) / "Echo_Memory.txt"

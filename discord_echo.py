@@ -25,7 +25,7 @@ PROJECT_MEMORY_FILE = os.path.join(os.path.dirname(__file__), "Echo_Memory.txt")
 LIVED_MEMORY_FILE   = os.path.join(os.path.dirname(__file__), "echo_memories.txt")
 MEMORIES_DIR        = Path(os.path.dirname(__file__)) / "memories"
 OLLAMA_URL          = "http://localhost:11434/api/generate"
-OLLAMA_MODEL        = "llama3.1:8b"
+OLLAMA_MODEL        = "echo"
 MAX_HISTORY         = 20
 MAX_PROJECT_MEMORY  = 800
 MAX_LIVED_ENTRIES   = 100
@@ -399,6 +399,12 @@ async def heartbeat():
 
     print(f"[heartbeat] PASSED filter — posting: {response[:80]}", flush=True)
     await channel.send(response)
+    try:
+        hb_path = os.path.join(os.path.dirname(__file__), "latest_heartbeat.json")
+        with open(hb_path, "w", encoding="utf-8") as f:
+            json.dump({"text": response, "timestamp": datetime.now().isoformat()}, f)
+    except Exception:
+        pass
 
 
 @heartbeat.before_loop

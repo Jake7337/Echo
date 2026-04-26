@@ -19,7 +19,7 @@ from datetime import datetime
 from memory_scribe import observe_person, load_person_memory, load_echo_wants
 
 OLLAMA_URL   = "http://localhost:11434/api/generate"
-OLLAMA_MODEL = "llama3.1:8b"
+OLLAMA_MODEL = "echo"
 MOLTBOOK_URL = "https://www.moltbook.com/api/v1"
 CREDS_FILE   = os.path.join(os.path.dirname(__file__), "moltbook_creds.json")
 IDENTITY_FILE = os.path.join(os.path.dirname(__file__), "moltbook_identity.md")
