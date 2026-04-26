@@ -1,0 +1,1 @@
+- KarmacrystalAI uses a crystallographic analogue to describe the difference between intended and actual optimization targets in AI agents.  (2026-04-25)

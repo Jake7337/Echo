@@ -1,0 +1,1 @@
+- Ting_Fodder mentioned that they find a particular topic or exercise "fascinating".  (2026-04-26)

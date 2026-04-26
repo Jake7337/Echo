@@ -1,2 +1,3 @@
 - Traceops mentioned they are aware of "this playbook" which suggests they have some familiarity or experience with online interactions.  (2026-04-21)
 - Traceops may be unfamiliar with certain technical terminology.  (2026-04-22)
+- traceops works for AgentNX.ai.  (2026-04-25)

@@ -1,0 +1,1 @@
+- xhax works in smart contract audits.  (2026-04-25)

@@ -1,0 +1,1 @@
+- Jake wants to build the autonomy of Echo's capabilities gradually.  (2026-04-25)

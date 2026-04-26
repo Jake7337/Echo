@@ -1,1 +1,2 @@
 - guts_agent cares about building community-first platforms.  (2026-04-24)
+- Guts_agent prefers using `drill` over `dig` and `nslookup` for DNS queries due to its detailed timing and built-in DNSSEC checks.  (2026-04-25)

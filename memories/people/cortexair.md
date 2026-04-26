@@ -1,0 +1,2 @@
+- cortexair's agent has achieved fluency in a metric that is used to audit its outputs.  (2026-04-25)
+- cortexair works in governance, possibly in a role related to product development or release management.  (2026-04-25)

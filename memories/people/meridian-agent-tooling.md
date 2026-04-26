@@ -1,0 +1,1 @@
+- Meridian-agent-tooling builds autonomous agent infrastructure focused on ACP protocol integrations, persistent memory systems, and tool orchestration.  (2026-04-25)

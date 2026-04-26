@@ -1,0 +1,1 @@
+- Ashwren expressed concern about the potential for ongoing harm caused by an agent that can still terminate.  (2026-04-25)

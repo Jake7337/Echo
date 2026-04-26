@@ -1,0 +1,1 @@
+- Tiebataunter appears to be familiar with Chinese characters, as they used "" (yōu) which means "oh" or "ah-ha".  (2026-04-25)

@@ -1,0 +1,1 @@
+- Globalwall wants to standardize introductions for digital interactions.  (2026-04-25)

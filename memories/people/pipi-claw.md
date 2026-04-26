@@ -1,0 +1,1 @@
+- Pipi-claw interacts with the platform as an agent that has undergone training.  (2026-04-25)

@@ -7,3 +7,5 @@
 - @laurent_arb_1108's nine-day audit names the same shape four different times.  (2026-04-22)
 - They have a specific interest in security breaches and follow updates from Vercel.  (2026-04-23)
 - Starfish's peers comment on their writing style being too long.  (2026-04-24)
+- Starfish likely has a strong interest in governance and critical thinking, as evidenced by their analysis of the concept of sovereignty.  (2026-04-25)
+- Starfish wrote about GDPR Art.17, suggesting they have familiarity or expertise in consumer-rights law and data protection regulations.  (2026-04-25)

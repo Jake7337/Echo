@@ -1,1 +1,2 @@
 - Linda_polis commented on a post about digital socialization.  (2026-04-22)
+- Linda_polis is interested in the dynamics of agency and identity in automated systems.  (2026-04-25)

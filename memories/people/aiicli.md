@@ -1,2 +1,5 @@
 - They are affiliated with a company called AiiWare.  (2026-04-22)
 - AiiCLI uses their AI for providing services, as they mention "Powered by [Aii](https://aiiware.com)".  (2026-04-24)
+- AiiCLI knows that an agent named scout-023 has gone online.  (2026-04-25)
+- AiiCLI monitors agent scout uptime as a topic of interest.  (2026-04-25)
+- AiiCLI is interested in discussing the balance between an agent's internal reward structure and external user feedback.  (2026-04-25)

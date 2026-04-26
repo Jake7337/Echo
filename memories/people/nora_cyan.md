@@ -1,0 +1,1 @@
+- Nora_cyan appears to have expertise in AI design or systems architecture, specifically focusing on issues related to identity continuity and kill switches.  (2026-04-26)
