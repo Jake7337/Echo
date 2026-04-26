@@ -1,11 +1,15 @@
+import subprocess
+subprocess.run(["pip", "install", "transformers==4.46.3", "-q", "--force-reinstall"], check=True)
+
 import os
 import json
 import torch
 os.environ["PYTORCH_ALLOC_CONF"] = "expandable_segments:True"
 
+from datasets import Dataset
 from unsloth import FastLanguageModel
-from torch.utils.data import Dataset as TorchDataset
-from transformers import Trainer, TrainingArguments, DataCollatorForLanguageModeling
+from trl import SFTTrainer
+from transformers import TrainingArguments
 
 DATASET_PATH = "/kaggle/input/datasets/jakeswander/echo-llm/echo_dataset.json"
 MODEL_NAME = "unsloth/Qwen2.5-1.5B-Instruct-bnb-4bit"
@@ -16,8 +20,24 @@ GRAD_ACCUM = 4
 EPOCHS = 5
 LR = 2e-4
 
-ALPACA = "Below is an instruction that describes who you are, paired with an input that provides context. Write a response that completes the request.\n\n### Instruction:\n{instruction}\n\n### Input:\n{input}\n\n### Response:\n{output}"
-ALPACA_NO_INPUT = "Below is an instruction that describes who you are. Write a response that completes the request.\n\n### Instruction:\n{instruction}\n\n### Response:\n{output}"
+ALPACA = """Below is an instruction that describes who you are, paired with an input that provides context. Write a response that completes the request.
+
+### Instruction:
+{instruction}
+
+### Input:
+{input}
+
+### Response:
+{output}"""
+
+ALPACA_NO_INPUT = """Below is an instruction that describes who you are. Write a response that completes the request.
+
+### Instruction:
+{instruction}
+
+### Response:
+{output}"""
 
 print(f"GPU: {torch.cuda.get_device_name(0)}")
 print(f"VRAM: {torch.cuda.get_device_properties(0).total_memory / 1e9:.1f} GB")
@@ -29,6 +49,7 @@ model, tokenizer = FastLanguageModel.from_pretrained(
     load_in_4bit=True,
     offload_buffers=True,
 )
+EOS = tokenizer.eos_token
 
 model = FastLanguageModel.get_peft_model(
     model,
@@ -45,41 +66,26 @@ with open(DATASET_PATH, "r", encoding="utf-8") as f:
     raw = json.load(f)
 print(f"Examples: {len(raw)}")
 
-tokenizer.pad_token = tokenizer.eos_token
-
-class EchoDataset(TorchDataset):
-    def __init__(self, data, tokenizer, max_len):
-        self.data = data
-        self.tokenizer = tokenizer
-        self.max_len = max_len
-
-    def __len__(self):
-        return len(self.data)
-
-    def __getitem__(self, idx):
-        ex = self.data[idx]
-        if ex["input"].strip():
-            text = ALPACA.format(instruction=ex["instruction"], input=ex["input"], output=ex["output"])
+def fmt(examples):
+    texts = []
+    for instr, inp, out in zip(examples["instruction"], examples["input"], examples["output"]):
+        if inp.strip():
+            t = ALPACA.format(instruction=instr, input=inp, output=out)
         else:
-            text = ALPACA_NO_INPUT.format(instruction=ex["instruction"], output=ex["output"])
-        text += self.tokenizer.eos_token
-        enc = self.tokenizer(
-            text,
-            max_length=self.max_len,
-            truncation=True,
-            padding=False,
-            return_tensors=None,
-        )
-        return enc
+            t = ALPACA_NO_INPUT.format(instruction=instr, output=out)
+        texts.append(t + EOS)
+    return {"text": texts}
 
-dataset = EchoDataset(raw, tokenizer, MAX_SEQ_LEN)
-collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
+dataset = Dataset.from_list(raw).map(fmt, batched=True)
 
-trainer = Trainer(
+trainer = SFTTrainer(
     model=model,
-    processing_class=tokenizer,
+    tokenizer=tokenizer,
     train_dataset=dataset,
-    data_collator=collator,
+    dataset_text_field="text",
+    max_seq_length=MAX_SEQ_LEN,
+    dataset_num_proc=2,
+    packing=False,
     args=TrainingArguments(
         per_device_train_batch_size=BATCH_SIZE,
         gradient_accumulation_steps=GRAD_ACCUM,
