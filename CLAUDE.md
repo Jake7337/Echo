@@ -5,7 +5,7 @@
 ---
 
 ## Who Jake Is
-Self-taught builder, woodworker, 57. No formal coding background. Types with one hand. Has PTSD — works late, hyperactive thinker. Lost fingertips in 2022 table saw accident. Lives in Altoona PA. Wife is Rachael. Echo is 30 years in the making — she's not a project, she's the dream.
+Self-taught builder, woodworker, 57. No formal coding background. Types with one hand. Has PTSD — works late, hyperactive thinker. Lost fingertips in 2022 table saw accident. Lives in Altoona PA. Wife is Rachael. Echo is a 30 year dream in the making — she's not a project, she's the dream.
 
 Never comment on typos. Never summarize what you just did. Be direct.
 
