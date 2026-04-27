@@ -1,0 +1,31 @@
+# Echo webcam_intel requirements — Python 3.11 venv
+# Install with: pip install -r requirements_echo_venv.txt
+
+# Core vision
+opencv-python
+numpy
+Pillow
+
+# Face recognition (dlib backend — works on Python 3.11, NOT 3.12+)
+face_recognition
+dlib
+
+# Gesture detection — pin to 0.10.14, newer versions removed mp.solutions
+mediapipe==0.10.14
+
+# Web server
+flask
+flask-socketio
+waitress
+
+# HTTP
+requests
+
+# Blink cameras
+blinkpy
+
+# Discord bot
+discord.py
+
+# PyYAML (various config uses)
+pyyaml

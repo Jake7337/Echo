@@ -15,10 +15,19 @@ import sys
 import os
 import time
 import json
+import logging
 import cv2
 import threading
 import numpy as np
 from flask import Flask, Response, jsonify, render_template_string
+
+# ── Logging setup (before any module imports) ─────────────────────────────────
+logging.basicConfig(
+    level=logging.WARNING,           # INFO/DEBUG is noisy; bump up when debugging
+    format="%(asctime)s [%(name)s] %(levelname)s: %(message)s",
+    datefmt="%H:%M:%S",
+)
+log = logging.getLogger("webcam_intel.main")
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -99,31 +108,38 @@ def capture_loop(cam: Camera, pipeline: Pipeline):
     last_published = 0.0
 
     while True:
-        frame = cam.read()
-        if frame is None:
-            time.sleep(0.05)
-            continue
+        try:
+            frame = cam.read()
+            if frame is None:
+                time.sleep(0.05)
+                continue
 
-        event, annotated = pipeline.process(frame)
-        event["raw_metadata"] = meta
+            event, annotated = pipeline.process(frame)
+            event["raw_metadata"] = meta
 
-        display = annotated.copy()
-        if _debug:
-            draw_debug(display, event)
+            display = annotated.copy()
+            if _debug:
+                draw_debug(display, event)
 
-        # Encode to JPEG for streaming
-        ret, buf = cv2.imencode(".jpg", display, [cv2.IMWRITE_JPEG_QUALITY, 80])
-        if ret:
-            with _frame_lock:
-                _latest_frame = buf.tobytes()
-                _latest_event = event
+            # Encode to JPEG for streaming
+            ret, buf = cv2.imencode(".jpg", display, [cv2.IMWRITE_JPEG_QUALITY, 80])
+            if ret:
+                with _frame_lock:
+                    _latest_frame = buf.tobytes()
+                    _latest_event = event
 
-        # Publish to echo_server
-        now = time.time()
-        if PUBLISH_EVENTS and (now - last_published) >= EVENT_INTERVAL:
-            if event["presence"]["any_person"] or event["gestures"]:
-                ev_bus.publish(event)
-                last_published = now
+            # Publish to echo_server
+            now = time.time()
+            if PUBLISH_EVENTS and (now - last_published) >= EVENT_INTERVAL:
+                if event["presence"]["any_person"] or event["gestures"]:
+                    ev_bus.publish(event)
+                    last_published = now
+
+        except Exception as e:
+            import traceback
+            print(f"[capture_loop] Error: {e}", flush=True)
+            traceback.print_exc()
+            time.sleep(0.1)  # brief pause then keep running
 
 
 # ── Flask app ─────────────────────────────────────────────────────────────────
@@ -314,4 +330,10 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\n  Stopped.", flush=True)
+    except Exception as e:
+        log.exception("Fatal error in webcam_intel: %s", e)
+        sys.exit(1)
