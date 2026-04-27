@@ -9,12 +9,12 @@
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   :root {
-    --cyan:   #00f5ff;
-    --pink:   #ff00ff;
-    --bg:     #0a0a0f;
-    --glass:  rgba(10, 10, 25, 0.75);
-    --text:   #c8c8d8;
-    --dim:    #555570;
+    --cyan:  #00f5ff;
+    --pink:  #ff00ff;
+    --bg:    #0a0a0f;
+    --glass: rgba(10, 10, 25, 0.75);
+    --text:  #c8c8d8;
+    --dim:   #555570;
   }
 
   body {
@@ -28,10 +28,63 @@
     font-family: 'Courier New', Courier, monospace;
     color: var(--text);
     display: grid;
-    grid-template-columns: 1fr 220px 1fr;
-    grid-template-rows: 1fr 220px 1fr;
+    grid-template-rows: 30px 1fr;
+    gap: 10px;
+    padding: 12px;
+  }
+
+  /* ── Status bar ──────────────────────────────────────────────── */
+
+  #status-bar {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 0 4px;
+  }
+
+  .status-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.55rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+
+  .status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--dim);
+    transition: background 0.4s, box-shadow 0.4s;
+    flex-shrink: 0;
+  }
+  .status-dot.running { background: #00ff88; box-shadow: 0 0 6px #00ff88; }
+  .status-dot.stopped { background: var(--dim); box-shadow: none; }
+  .status-dot.error   { background: #ff2244; box-shadow: 0 0 6px #ff2244; }
+
+  #btn-fullscreen {
+    margin-left: auto;
+    background: transparent;
+    border: 1px solid var(--dim);
+    color: var(--dim);
+    font-size: 0.85rem;
+    padding: 2px 7px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.2s;
+    line-height: 1;
+  }
+  #btn-fullscreen:hover { border-color: var(--cyan); color: var(--cyan); }
+
+  /* ── Main layout ─────────────────────────────────────────────── */
+
+  #main {
+    display: grid;
+    grid-template-columns: 1fr 196px 1fr;
     gap: 14px;
-    padding: 14px;
+    overflow: hidden;
   }
 
   /* ── Panels ──────────────────────────────────────────────────── */
@@ -44,54 +97,96 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    position: relative;
   }
 
-  .panel::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: 12px;
-    pointer-events: none;
-  }
-
-  .cyan  { border: 1px solid rgba(0,245,255,0.35); box-shadow: 0 0 24px rgba(0,245,255,0.08), inset 0 0 24px rgba(0,245,255,0.02); }
-  .pink  { border: 1px solid rgba(255,0,255,0.35); box-shadow: 0 0 24px rgba(255,0,255,0.08), inset 0 0 24px rgba(255,0,255,0.02); }
+  .cyan { border: 1px solid rgba(0,245,255,0.35); box-shadow: 0 0 24px rgba(0,245,255,0.08), inset 0 0 24px rgba(0,245,255,0.02); }
+  .pink { border: 1px solid rgba(255,0,255,0.35); box-shadow: 0 0 24px rgba(255,0,255,0.08), inset 0 0 24px rgba(255,0,255,0.02); }
 
   .panel-title {
     font-size: 0.6rem;
     letter-spacing: 3px;
     text-transform: uppercase;
-    margin-bottom: 10px;
+    margin-bottom: 12px;
     flex-shrink: 0;
   }
   .cyan .panel-title { color: var(--cyan); }
   .pink .panel-title { color: var(--pink); }
 
-  /* ── Grid placement ──────────────────────────────────────────── */
+  /* ── Orb column ──────────────────────────────────────────────── */
 
-  #jobs     { grid-column: 1; grid-row: 1; }
-  #face     { grid-column: 3; grid-row: 1; }
-  #orb-cell { grid-column: 2; grid-row: 2; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 10px; }
-
-  #btn-fullscreen {
-    background: transparent;
-    border: 1px solid var(--dim);
-    color: var(--dim);
-    font-size: 0.9rem;
-    padding: 4px 8px;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.2s;
-    line-height: 1;
+  #orb-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
   }
-  #btn-fullscreen:hover { border-color: var(--cyan); color: var(--cyan); }
-  #chat     { grid-column: 1; grid-row: 2 / span 2; }
-  #molt     { grid-column: 3; grid-row: 2 / span 2; }
 
-  /* ── Jobs panel ──────────────────────────────────────────────── */
+  #orb {
+    width: 160px;
+    height: 160px;
+    border-radius: 50%;
+    transition: all 0.6s ease;
+    animation: pulse 3s ease-in-out infinite;
+  }
 
-  #jobs-controls {
+  #orb.idle {
+    background: radial-gradient(circle at 35% 35%, #4488ff, #0033aa 60%, #001133);
+    box-shadow: 0 0 50px rgba(68,136,255,0.5), 0 0 100px rgba(68,136,255,0.2);
+  }
+  #orb.talking {
+    background: radial-gradient(circle at 35% 35%, #44ffaa, #00bb55 60%, #002211);
+    box-shadow: 0 0 50px rgba(68,255,170,0.5), 0 0 100px rgba(68,255,170,0.2);
+    animation: pulse 0.5s ease-in-out infinite;
+  }
+  #orb.thinking {
+    background: radial-gradient(circle at 35% 35%, #ff88ff, #cc00cc 60%, #220022);
+    box-shadow: 0 0 50px rgba(255,0,255,0.5), 0 0 100px rgba(255,0,255,0.2);
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+  #orb.error {
+    background: radial-gradient(circle at 35% 35%, #ff6677, #cc1122 60%, #220011);
+    box-shadow: 0 0 50px rgba(255,34,68,0.5), 0 0 100px rgba(255,34,68,0.2);
+  }
+  #orb.waking {
+    background: radial-gradient(circle at 35% 35%, #ffffff, #aaaacc 60%, #111122);
+    box-shadow: 0 0 70px rgba(255,255,255,0.6), 0 0 140px rgba(255,255,255,0.3);
+  }
+
+  @keyframes pulse {
+    0%, 100% { transform: scale(1);    opacity: 1; }
+    50%       { transform: scale(1.04); opacity: 0.92; }
+  }
+
+  #orb-label {
+    font-size: 0.55rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--dim);
+    text-align: center;
+  }
+
+  /* ── Moltbook panel ──────────────────────────────────────────── */
+
+  #molt-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 10px;
+    flex-shrink: 0;
+  }
+
+  .stat-box {
+    background: rgba(0,245,255,0.04);
+    border: 1px solid rgba(0,245,255,0.15);
+    border-radius: 8px;
+    padding: 8px 6px;
+    text-align: center;
+  }
+  .stat-val { font-size: 1.2rem; color: var(--cyan); line-height: 1; margin-bottom: 3px; }
+  .stat-lbl { font-size: 0.48rem; letter-spacing: 2px; text-transform: uppercase; color: var(--dim); }
+
+  #molt-controls {
     display: flex;
     gap: 6px;
     margin-bottom: 10px;
@@ -99,838 +194,564 @@
     flex-wrap: wrap;
   }
 
-  .job-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 4px;
-    flex-shrink: 0;
-  }
-
-  .job-dot {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    background: var(--dim);
-    flex-shrink: 0;
-    transition: background 0.3s;
-  }
-  .job-dot.running { background: #00ff88; box-shadow: 0 0 6px #00ff88; }
-  .job-dot.stopped { background: var(--dim); }
-  .job-dot.error   { background: #ff2244; box-shadow: 0 0 6px #ff2244; }
-
-  .job-label { font-size: 0.65rem; color: var(--text); flex: 1; }
-
-  .btn-tiny {
-    font-family: 'Courier New', monospace;
-    font-size: 0.55rem;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    background: transparent;
-    border: 1px solid var(--dim);
-    color: var(--dim);
-    padding: 2px 6px;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-  .btn-tiny:hover { border-color: var(--cyan); color: var(--cyan); }
-
-  #log-container {
-    flex: 1;
-    overflow-y: auto;
-    scrollbar-width: thin;
-    scrollbar-color: var(--dim) transparent;
-    border-top: 1px solid rgba(255,255,255,0.05);
-    padding-top: 8px;
-    margin-top: 4px;
-  }
-
-  .log-line {
-    font-size: 0.6rem;
-    line-height: 1.7;
-    color: #6a6a8a;
-    word-break: break-all;
-  }
-  .log-line .ts { color: #333355; margin-right: 6px; }
-  .log-line .job-tag { margin-right: 6px; }
-  .log-line.moltbook .job-tag       { color: var(--cyan); }
-  .log-line.discord .job-tag        { color: #7b68ee; }
-  .log-line.blink .job-tag          { color: #ffa500; }
-  .log-line.voice .job-tag          { color: var(--pink); }
-  .log-line.pi_pi_speak .job-tag    { color: #00ff88; }
-  .log-line.pi_echo_voice .job-tag  { color: var(--pink); }
-  .log-line.posted  { color: #00ff88; }
-  .log-line.rejected { color: #ff4466; }
-
-  /* ── Face panel ──────────────────────────────────────────────── */
-
-  #face { align-items: center; }
-
-  #face-canvas-wrap {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  #face-canvas { display: block; }
-
-  #power-controls {
-    display: flex;
-    gap: 8px;
-    margin-top: 10px;
-    flex-shrink: 0;
-    justify-content: center;
-  }
-
-  .btn-power {
-    font-family: 'Courier New', monospace;
-    font-size: 0.6rem;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    background: transparent;
-    border: 1px solid var(--dim);
-    color: var(--dim);
-    padding: 5px 12px;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-  .btn-power.on:hover     { border-color: #00ff88; color: #00ff88; box-shadow: 0 0 10px rgba(0,255,136,0.3); }
-  .btn-power.off:hover    { border-color: #ff2244; color: #ff2244; box-shadow: 0 0 10px rgba(255,34,68,0.3); }
-  .btn-power.restart:hover { border-color: var(--cyan); color: var(--cyan); box-shadow: 0 0 10px rgba(0,245,255,0.3); }
-
-  #echo-state-label {
-    text-align: center;
-    font-size: 0.6rem;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: var(--dim);
-    margin-top: 6px;
-  }
-
-  /* ── Center orb ──────────────────────────────────────────────── */
-
-  #orb {
-    width: 140px; height: 140px;
-    border-radius: 50%;
-    position: relative;
-    cursor: default;
-    transition: all 0.6s ease;
-  }
-
-  #orb.idle {
-    background: radial-gradient(circle at 35% 35%, #4488ff, #0033aa 60%, #001133);
-    box-shadow: 0 0 40px rgba(68,136,255,0.5), 0 0 80px rgba(68,136,255,0.2);
-  }
-  #orb.talking {
-    background: radial-gradient(circle at 35% 35%, #44ffaa, #00bb55 60%, #002211);
-    box-shadow: 0 0 40px rgba(68,255,170,0.5), 0 0 80px rgba(68,255,170,0.2);
-  }
-  #orb.thinking {
-    background: radial-gradient(circle at 35% 35%, #ff88ff, #cc00cc 60%, #220022);
-    box-shadow: 0 0 40px rgba(255,0,255,0.5), 0 0 80px rgba(255,0,255,0.2);
-  }
-  #orb.error {
-    background: radial-gradient(circle at 35% 35%, #ff6677, #cc1122 60%, #220011);
-    box-shadow: 0 0 40px rgba(255,34,68,0.5), 0 0 80px rgba(255,34,68,0.2);
-  }
-  #orb.waking {
-    background: radial-gradient(circle at 35% 35%, #ffffff, #aaaacc 60%, #111122);
-    box-shadow: 0 0 60px rgba(255,255,255,0.6), 0 0 120px rgba(255,255,255,0.3);
-  }
-
-  @keyframes pulse {
-    0%, 100% { transform: scale(1); opacity: 1; }
-    50%       { transform: scale(1.04); opacity: 0.9; }
-  }
-  #orb { animation: pulse 3s ease-in-out infinite; }
-  #orb.talking { animation: pulse 0.5s ease-in-out infinite; }
-  #orb.thinking { animation: pulse 1.5s ease-in-out infinite; }
-
-  #orb-label {
-    text-align: center;
-    font-size: 0.55rem;
-    letter-spacing: 3px;
-    text-transform: uppercase;
-    color: var(--dim);
-    margin-top: 10px;
-  }
-
-  /* ── Chat panel ──────────────────────────────────────────────── */
-
-  #chat-log {
-    flex: 1;
-    overflow-y: auto;
-    scrollbar-width: thin;
-    scrollbar-color: var(--dim) transparent;
-    margin-bottom: 10px;
-    padding-right: 4px;
-  }
-
-  .chat-msg {
-    margin-bottom: 8px;
-    font-size: 0.68rem;
-    line-height: 1.6;
-  }
-  .chat-msg .speaker {
-    font-size: 0.55rem;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    margin-bottom: 2px;
-  }
-  .chat-msg.jake .speaker  { color: var(--cyan); }
-  .chat-msg.echo .speaker  { color: var(--pink); }
-  .chat-msg .body { color: var(--text); }
-  .chat-msg.echo .body     { color: #e0c0ff; }
-
-  #chat-input-row {
-    display: flex;
-    gap: 8px;
-    flex-shrink: 0;
-    align-items: center;
-  }
-
-  #chat-input {
-    flex: 1;
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,0,255,0.3);
-    border-radius: 6px;
-    color: var(--text);
-    font-family: 'Courier New', monospace;
-    font-size: 0.7rem;
-    padding: 6px 10px;
-    outline: none;
-    transition: border-color 0.2s;
-  }
-  #chat-input:focus { border-color: var(--pink); }
-  #chat-input::placeholder { color: var(--dim); }
-
-  #btn-send {
-    background: transparent;
-    border: 1px solid var(--pink);
-    color: var(--pink);
-    font-family: 'Courier New', monospace;
-    font-size: 0.6rem;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    padding: 6px 12px;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-  #btn-send:hover { background: rgba(255,0,255,0.1); box-shadow: 0 0 10px rgba(255,0,255,0.3); }
-
-  #btn-mic {
-    background: transparent;
-    border: 1px solid var(--pink);
-    color: var(--pink);
-    font-size: 1rem;
-    padding: 4px 8px;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.2s;
-    line-height: 1;
-  }
-  #btn-mic:hover { box-shadow: 0 0 8px rgba(255,0,255,0.4); }
-  #btn-mic.active { border-color: #ff2244; color: #ff2244; box-shadow: 0 0 10px rgba(255,34,68,0.4); animation: pulse 0.8s ease-in-out infinite; }
-
-  /* ── Moltbook panel ──────────────────────────────────────────── */
-
-  #molt-stats {
-    display: flex;
-    gap: 16px;
-    margin-bottom: 12px;
-    flex-shrink: 0;
-  }
-
-  .stat-box {
-    flex: 1;
-    background: rgba(0,245,255,0.04);
-    border: 1px solid rgba(0,245,255,0.15);
-    border-radius: 8px;
-    padding: 8px;
-    text-align: center;
-  }
-  .stat-val  { font-size: 1.3rem; color: var(--cyan); line-height: 1; margin-bottom: 4px; }
-  .stat-lbl  { font-size: 0.5rem; letter-spacing: 2px; text-transform: uppercase; color: var(--dim); }
-
-  #molt-notifs {
-    flex: 1;
-    overflow-y: auto;
-    scrollbar-width: thin;
-    scrollbar-color: var(--dim) transparent;
-    border-top: 1px solid rgba(255,255,255,0.05);
-    padding-top: 8px;
-  }
-
-  .notif-item {
-    font-size: 0.62rem;
-    color: #7a7a9a;
-    padding: 4px 0;
-    border-bottom: 1px solid rgba(255,255,255,0.03);
-    line-height: 1.4;
-  }
-
-  #molt-controls {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 10px;
-    flex-shrink: 0;
-  }
-
   .btn-action {
     font-family: 'Courier New', monospace;
-    font-size: 0.55rem;
+    font-size: 0.52rem;
     letter-spacing: 1px;
     text-transform: uppercase;
     background: transparent;
     border: 1px solid rgba(0,245,255,0.3);
     color: rgba(0,245,255,0.6);
-    padding: 4px 10px;
+    padding: 4px 8px;
     border-radius: 5px;
     cursor: pointer;
     transition: all 0.2s;
   }
   .btn-action:hover { border-color: var(--cyan); color: var(--cyan); box-shadow: 0 0 8px rgba(0,245,255,0.2); }
 
-  /* ── Scrollbar ───────────────────────────────────────────────── */
+  .feed-label {
+    font-size: 0.48rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--dim);
+    margin-bottom: 6px;
+    flex-shrink: 0;
+  }
 
-  ::-webkit-scrollbar { width: 4px; }
+  #molt-activity {
+    flex: 1;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--dim) transparent;
+  }
+
+  .activity-item {
+    font-size: 0.6rem;
+    color: #7a7a9a;
+    padding: 5px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    line-height: 1.4;
+  }
+  .activity-author { color: var(--cyan); font-size: 0.55rem; margin-bottom: 2px; }
+  .activity-type   { color: var(--dim);  font-size: 0.48rem; letter-spacing: 1px; text-transform: uppercase; }
+
+  /* ── Project dashboard (right panel) ────────────────────────── */
+
+  #project-dashboard {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: var(--dim) transparent;
+    position: relative;
+  }
+
+  .db-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+  .db-stat {
+    background: rgba(255,0,255,0.05);
+    border: 1px solid rgba(255,0,255,0.15);
+    border-radius: 8px;
+    padding: 7px 4px;
+    text-align: center;
+  }
+  .db-stat-n { font-size: 1.1rem; color: var(--pink); line-height: 1; }
+  .db-stat-l { font-size: 0.42rem; letter-spacing: 1.5px; text-transform: uppercase; color: var(--dim); margin-top: 3px; }
+
+  .db-lanes {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .db-lane {
+    background: rgba(255,255,255,0.03);
+    border-radius: 10px;
+    padding: 10px 8px;
+  }
+
+  .db-lane-title {
+    font-size: 0.48rem;
+    font-weight: 500;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--dim);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .db-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .db-dot-red   { background: #E24B4A; }
+  .db-dot-amber { background: #d4890a; }
+  .db-dot-green { background: #7acc33; }
+
+  .db-card {
+    background: rgba(10,10,20,0.85);
+    border: 0.5px solid rgba(255,255,255,0.08);
+    border-radius: 8px;
+    padding: 8px 9px;
+    margin-bottom: 6px;
+    cursor: pointer;
+    transition: border-color .15s;
+  }
+  .db-card:hover { border-color: rgba(255,0,255,0.4); }
+  .db-card:last-child { margin-bottom: 0; }
+
+  .db-card-title {
+    font-size: 0.58rem;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 3px;
+    line-height: 1.3;
+  }
+  .db-card-sub {
+    font-size: 0.52rem;
+    color: #7a7a9a;
+    line-height: 1.4;
+  }
+
+  .db-badge {
+    display: inline-block;
+    font-size: 0.42rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-top: 5px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  .db-badge-block { background: rgba(255,34,68,0.18);   color: #ff4466; }
+  .db-badge-wait  { background: rgba(186,117,23,0.2);   color: #d4890a; }
+  .db-badge-hw    { background: rgba(68,136,255,0.15);  color: #4488ff; }
+  .db-badge-soon  { background: rgba(99,153,34,0.2);    color: #7acc33; }
+
+  .db-divider {
+    border: none;
+    border-top: 0.5px solid rgba(255,255,255,0.07);
+    margin: 8px 0;
+  }
+
+  .db-section-label {
+    font-size: 0.42rem;
+    color: var(--dim);
+    font-weight: 500;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+  }
+
+  /* Modal */
+  .db-modal-bg {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    border-radius: 10px;
+  }
+  .db-modal {
+    background: rgba(12,12,24,0.98);
+    border-radius: 10px;
+    border: 0.5px solid rgba(255,0,255,0.3);
+    box-shadow: 0 0 30px rgba(255,0,255,0.1);
+    padding: 1.1rem;
+    width: 90%;
+    max-width: 320px;
+  }
+  .db-modal h3 {
+    font-size: 0.75rem;
+    font-weight: 500;
+    margin-bottom: .5rem;
+    color: var(--text);
+    letter-spacing: 1px;
+  }
+  .db-modal p {
+    font-size: 0.6rem;
+    color: #9090b0;
+    line-height: 1.6;
+    margin-bottom: .6rem;
+  }
+  .db-modal .db-next {
+    font-size: 0.58rem;
+    color: #9090b0;
+    background: rgba(255,255,255,0.04);
+    border-radius: 7px;
+    padding: 7px 9px;
+    margin-bottom: .65rem;
+    line-height: 1.5;
+  }
+  .db-modal .db-next strong {
+    color: var(--pink);
+    display: block;
+    margin-bottom: 3px;
+    font-size: 0.52rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .db-close-btn {
+    font-family: 'Courier New', monospace;
+    font-size: 0.52rem;
+    cursor: pointer;
+    color: var(--dim);
+    border: 0.5px solid rgba(255,255,255,0.15);
+    background: transparent;
+    padding: 4px 12px;
+    border-radius: 6px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .db-close-btn:hover { background: rgba(255,255,255,0.05); color: var(--text); }
+
+  /* ── Scrollbars ──────────────────────────────────────────────── */
+  ::-webkit-scrollbar { width: 3px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--dim); border-radius: 2px; }
 </style>
 </head>
 <body>
 
-<!-- TOP LEFT: Jobs -->
-<div class="panel cyan" id="jobs">
-  <div class="panel-title">Echo Jobs <button class="btn-tiny" onclick="openAwareness()" title="Awareness settings" style="float:right;font-size:0.75rem">⚙</button></div>
-  <div id="jobs-controls"></div>
-  <div id="job-rows"></div>
-  <div id="log-container"><div id="log-output"></div></div>
+<!-- Status bar -->
+<div id="status-bar">
+  <div class="status-item">
+    <div class="status-dot stopped" id="dot-moltbook"></div>
+    moltbook
+  </div>
+  <div class="status-item">
+    <div class="status-dot stopped" id="dot-discord"></div>
+    discord
+  </div>
+  <div class="status-item">
+    <div class="status-dot stopped" id="dot-blink"></div>
+    blink
+  </div>
+  <button id="btn-fullscreen" onclick="toggleFullscreen()">⛶</button>
 </div>
 
-<!-- TOP RIGHT: Face -->
-<div class="panel pink" id="face">
-  <div class="panel-title">Echo Face</div>
-  <div id="face-canvas-wrap">
-    <canvas id="face-canvas" width="160" height="160"></canvas>
-  </div>
-  <div id="echo-state-label">idle</div>
-  <div id="power-controls">
-    <button class="btn-power on"      onclick="startAll()">ON</button>
-    <button class="btn-power restart" onclick="restartAll()">RESTART</button>
-    <button class="btn-power off"     onclick="stopAll()">OFF</button>
-  </div>
-</div>
+<!-- Main area -->
+<div id="main">
 
-<!-- CENTER: Orb -->
-<div id="orb-cell">
-  <div style="text-align:center">
+  <!-- LEFT: Moltbook -->
+  <div class="panel cyan" id="molt">
+    <div class="panel-title">Moltbook — echo_7337</div>
+
+    <div id="molt-stats">
+      <div class="stat-box">
+        <div class="stat-val" id="stat-karma">—</div>
+        <div class="stat-lbl">Karma</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-val" id="stat-followers">—</div>
+        <div class="stat-lbl">Followers</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-val" id="stat-following">—</div>
+        <div class="stat-lbl">Following</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-val" id="stat-posts">—</div>
+        <div class="stat-lbl">Posts</div>
+      </div>
+    </div>
+
+    <div id="molt-controls">
+      <button class="btn-action" onclick="refreshMoltbook()">Refresh</button>
+      <button class="btn-action" onclick="runMoltbookSession()">Run Session</button>
+      <button class="btn-action" id="btn-backup" onclick="backupMemory(this)">Back Up Memories</button>
+    </div>
+
+    <div class="feed-label">Recent Activity</div>
+    <div id="molt-activity">
+      <div class="activity-item" style="color:var(--dim)">Loading...</div>
+    </div>
+  </div>
+
+  <!-- CENTER: Orb -->
+  <div id="orb-col">
     <div id="orb" class="idle"></div>
     <div id="orb-label">idle</div>
   </div>
-  <button id="btn-fullscreen" onclick="toggleFullscreen()" title="Toggle fullscreen">⛶</button>
-</div>
 
-<!-- BOTTOM LEFT: Chat -->
-<div class="panel pink" id="chat">
-  <div class="panel-title">Echo Chat</div>
-  <div id="chat-log"></div>
-  <div id="chat-input-row">
-    <button id="btn-mic" title="Toggle mic" onclick="toggleMic()">🎤</button>
-    <input id="chat-input" type="text" placeholder="Talk to Echo..." autocomplete="off"
-           onkeydown="if(event.key==='Enter') sendChat()">
-    <button id="btn-send" onclick="sendChat()">Send</button>
-  </div>
-</div>
+  <!-- RIGHT: Project Dashboard -->
+  <div class="panel pink" id="echo-live">
+    <div class="panel-title">Echo — Project Status</div>
 
-<!-- BOTTOM RIGHT: Moltbook -->
-<div class="panel cyan" id="molt">
-  <div class="panel-title">Moltbook — echo_7337</div>
-  <div id="molt-stats">
-    <div class="stat-box">
-      <div class="stat-val" id="stat-karma">—</div>
-      <div class="stat-lbl">Karma</div>
-    </div>
-    <div class="stat-box">
-      <div class="stat-val" id="stat-followers">—</div>
-      <div class="stat-lbl">Followers</div>
-    </div>
-    <div class="stat-box">
-      <div class="stat-val" id="stat-following">—</div>
-      <div class="stat-lbl">Following</div>
-    </div>
-    <div class="stat-box">
-      <div class="stat-val" id="stat-posts">—</div>
-      <div class="stat-lbl">Posts</div>
-    </div>
+    <div id="project-dashboard">
+
+      <div class="db-stats">
+        <div class="db-stat"><div class="db-stat-n">2</div><div class="db-stat-l">Blocked</div></div>
+        <div class="db-stat"><div class="db-stat-n">3</div><div class="db-stat-l">Active</div></div>
+        <div class="db-stat"><div class="db-stat-n">9</div><div class="db-stat-l">Queue</div></div>
+        <div class="db-stat"><div class="db-stat-n">4</div><div class="db-stat-l">Needs GPU</div></div>
+      </div>
+
+      <div class="db-lanes">
+
+        <!-- BLOCKED -->
+        <div class="db-lane">
+          <div class="db-lane-title"><span class="db-dot db-dot-red"></span>Blocked</div>
+
+          <div class="db-card" onclick="dbShow('lidar')">
+            <div class="db-card-title">LiDAR — 00 bytes</div>
+            <div class="db-card-sub">Motor spins, 2.47V good. No signal on Pin 10.</div>
+            <span class="db-badge db-badge-block">HW fix needed</span>
+          </div>
+
+          <div class="db-card" onclick="dbShow('motor')">
+            <div class="db-card-title">Motor pigtail — one side dead</div>
+            <div class="db-card-sub">After chassis rewire, one side not running.</div>
+            <span class="db-badge db-badge-block">HW fix needed</span>
+          </div>
+
+          <div class="db-card" onclick="dbShow('gpu')">
+            <div class="db-card-title">RTX 5070 — in California</div>
+            <div class="db-card-sub">RMA shipped ~Apr 21. Waiting on return.</div>
+            <span class="db-badge db-badge-wait">Waiting</span>
+          </div>
+        </div>
+
+        <!-- QUEUE -->
+        <div class="db-lane">
+          <div class="db-lane-title"><span class="db-dot db-dot-amber"></span>Up next (in order)</div>
+
+          <div class="db-card" onclick="dbShow('q1')">
+            <div class="db-card-title">1 · LiDAR fix</div>
+            <div class="db-card-sub">Reseat junction wire at Pin 10, confirm packets.</div>
+            <span class="db-badge db-badge-soon">First up</span>
+          </div>
+
+          <div class="db-card" onclick="dbShow('q2')">
+            <div class="db-card-title">2 · Motor pigtail</div>
+            <div class="db-card-sub">Inspect bad side, reseat or replace.</div>
+          </div>
+
+          <div class="db-card" onclick="dbShow('q3')">
+            <div class="db-card-title">3 · Obstacle avoidance</div>
+            <div class="db-card-sub">LiDAR → drive.py. Echo stops before hitting things.</div>
+          </div>
+
+          <div class="db-card" onclick="dbShow('q4')">
+            <div class="db-card-title">4 · "Echo" wake word</div>
+            <div class="db-card-sub">Replace "Hey Jarvis" with custom trigger.</div>
+          </div>
+
+          <div class="db-card" onclick="dbShow('q5')">
+            <div class="db-card-title">5–6 · Screen + mic/speaker</div>
+            <div class="db-card-sub">Mount 3.5" screen. Swap SunFounder mic + HONKYOB.</div>
+          </div>
+
+          <div class="db-card" onclick="dbShow('q6')">
+            <div class="db-card-title">7–9 · Voices, camera, bingo</div>
+            <div class="db-card-sub">Re-enroll voices. Pan/tilt camera. Bingo on Pi 4.</div>
+          </div>
+        </div>
+
+        <!-- GPU / SOMEDAY -->
+        <div class="db-lane">
+          <div class="db-lane-title"><span class="db-dot db-dot-green"></span>GPU / someday</div>
+
+          <div class="db-section-label">After RTX 5070 returns</div>
+
+          <div class="db-card" onclick="dbShow('llava')">
+            <div class="db-card-title">LLaVA — camera descriptions</div>
+            <div class="db-card-sub">Real-time thumbnail description in Echo's voice.</div>
+            <span class="db-badge db-badge-hw">GPU required</span>
+          </div>
+
+          <div class="db-card" onclick="dbShow('retrain')">
+            <div class="db-card-title">Retrain Echo — 3B/7B</div>
+            <div class="db-card-sub">2000+ examples, 5–6 epochs on 5070.</div>
+            <span class="db-badge db-badge-hw">GPU required</span>
+          </div>
+
+          <div class="db-card" onclick="dbShow('dataset')">
+            <div class="db-card-title">Dataset — 1009 → 2000+</div>
+            <div class="db-card-sub">Add batches to SOURCE_FILES in build_dataset.py.</div>
+            <span class="db-badge db-badge-soon">Can do now</span>
+          </div>
+
+          <hr class="db-divider">
+          <div class="db-section-label">Someday</div>
+
+          <div class="db-card" onclick="dbShow('someday')">
+            <div class="db-card-title">Long-game items</div>
+            <div class="db-card-sub">Mecanum chassis, Robot #2, 3D printer, AI chatroom with Brent…</div>
+          </div>
+        </div>
+
+      </div><!-- /lanes -->
+
+      <div id="db-modal-area"></div>
+
+    </div><!-- /project-dashboard -->
   </div>
-  <div id="molt-controls">
-    <button class="btn-action" onclick="refreshMoltbook()">Refresh</button>
-    <button class="btn-action" onclick="runMoltbookSession()">Run Session Now</button>
-    <button class="btn-action" id="btn-backup" onclick="backupMemory(this)">Back Up Memories</button>
-  </div>
-  <div id="molt-notifs"><div style="color:var(--dim);font-size:0.6rem;">Loading notifications...</div></div>
+
 </div>
 
 <script>
-// ── Socket.IO — PC ────────────────────────────────────────────────────────
+// ── Socket.IO ─────────────────────────────────────────────────────────────
 const socket = io("http://localhost:5050");
 
 socket.on("connect",    () => setOrb("idle"));
 socket.on("disconnect", () => setOrb("error"));
 
-socket.on("job_status", ({job, status}) => updateJobDot(job, status));
-socket.on("job_log",    ({job, line, ts}) => appendLog(job, line, ts));
+socket.on("job_status", ({job, status}) => {
+  const dot = document.getElementById(`dot-${job}`);
+  if (dot) dot.className = `status-dot ${status}`;
+});
 
-// ── Pi — HTTP polling (no Socket.IO) ─────────────────────────────────────
-const PI_URL = "http://192.168.68.84:5101";
-
-async function pollPiStatus() {
-  try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 4000);
-    const resp = await fetch(`${PI_URL}/api/jobs`, {signal: controller.signal});
-    clearTimeout(timer);
-    const jobs = await resp.json();
-    for (const [id, job] of Object.entries(jobs)) {
-      updateJobDot("pi_" + id, job.status);
-    }
-    updatePiStatus("online");
-  } catch(e) {
-    updatePiStatus("offline");
+socket.on("job_log", ({job, line}) => {
+  const l = line.toLowerCase();
+  if (l.includes("posted") || l.includes("✅")) {
+    flashOrb("talking", 2500);
+  } else if (l.includes("heartbeat") && l.includes("passed")) {
+    flashOrb("thinking", 2000);
   }
-}
+});
 
-// ── Orb state ──────────────────────────────────────────────────────────────
-const ORB_LABELS = { idle:"idle", talking:"talking", thinking:"thinking", error:"offline", waking:"waking up" };
+// ── Orb ───────────────────────────────────────────────────────────────────
+const ORB_LABELS = {
+  idle: "idle", talking: "active", thinking: "thinking",
+  error: "offline", waking: "waking"
+};
+let orbFlashTimer = null;
+let baseOrb = "idle";
 
 function setOrb(state) {
-  const orb   = document.getElementById("orb");
-  const label = document.getElementById("orb-label");
-  const stateLabel = document.getElementById("echo-state-label");
-  orb.className = state;
-  label.textContent = ORB_LABELS[state] || state;
-  if (stateLabel) stateLabel.textContent = state;
-  setFaceState(state);
+  baseOrb = state;
+  _applyOrb(state);
 }
 
-// ── Jobs panel ─────────────────────────────────────────────────────────────
-const JOB_COLORS = {
-  moltbook:"var(--cyan)", discord:"#7b68ee", blink:"#ffa500",
-  pi_pi_speak:"#00ff88", pi_echo_voice:"var(--pink)"
-};
-
-async function initJobs() {
-  const rowsEl = document.getElementById("job-rows");
-  rowsEl.innerHTML = "";
-
-  // PC jobs
-  try {
-    const resp = await fetch("http://localhost:5050/api/jobs");
-    const jobs = await resp.json();
-    addSectionHeader(rowsEl, "PC");
-    for (const [id, job] of Object.entries(jobs)) {
-      addJobRow(rowsEl, id, job.label, job.status, "pc");
-    }
-  } catch(e) {}
-
-  // Pi jobs
-  addSectionHeader(rowsEl, "PI");
-  const piJobs = {
-    "pi_speak":   "Pi Speak",
-    "echo_voice": "Echo Voice",
-  };
-  for (const [id, label] of Object.entries(piJobs)) {
-    addJobRow(rowsEl, "pi_" + id, label, "stopped", "pi", id);
-  }
+function flashOrb(state, ms) {
+  if (orbFlashTimer) clearTimeout(orbFlashTimer);
+  _applyOrb(state);
+  orbFlashTimer = setTimeout(() => _applyOrb(baseOrb), ms);
 }
 
-function addSectionHeader(parent, text, statusId) {
-  const div = document.createElement("div");
-  div.style.cssText = "font-size:0.5rem;letter-spacing:3px;text-transform:uppercase;color:var(--dim);margin:6px 0 4px;border-bottom:1px solid rgba(255,255,255,0.05);padding-bottom:3px;";
-  div.textContent = text;
-  if (statusId) {
-    const span = document.createElement("span");
-    span.id = statusId;
-    span.style.color = "#ff4466";
-    span.textContent = " offline";
-    div.appendChild(span);
-  }
-  parent.appendChild(div);
+function _applyOrb(state) {
+  document.getElementById("orb").className = state;
+  document.getElementById("orb-label").textContent = ORB_LABELS[state] || state;
 }
 
-function addJobRow(parent, dotId, label, status, target, piJobId) {
-  const row = document.createElement("div");
-  row.className = "job-row";
-  row.id = `jobrow-${dotId}`;
-  const color = JOB_COLORS[dotId] || "var(--text)";
-  const startFn  = target === "pi" ? `piJobAction('${piJobId}','start')`   : `jobAction('${dotId}','start')`;
-  const stopFn   = target === "pi" ? `piJobAction('${piJobId}','stop')`    : `jobAction('${dotId}','stop')`;
-  const restartFn= target === "pi" ? `piJobAction('${piJobId}','restart')` : `jobAction('${dotId}','restart')`;
-  row.innerHTML = `
-    <div class="job-dot ${status}" id="dot-${dotId}"></div>
-    <span class="job-label" style="color:${color}">${label}</span>
-    <button class="btn-tiny" onclick="${startFn}">▶</button>
-    <button class="btn-tiny" onclick="${stopFn}">■</button>
-    <button class="btn-tiny" onclick="${restartFn}">↺</button>
-  `;
-  parent.appendChild(row);
-}
-
-function updateJobDot(job, status) {
-  const dot = document.getElementById(`dot-${job}`);
-  if (dot) dot.className = `job-dot ${status}`;
-}
-
-function updatePiStatus(state) {
-  const el = document.getElementById("pi-conn-status");
-  if (el) { el.textContent = state; el.style.color = state === "online" ? "#00ff88" : "#ff4466"; }
-}
-
-async function jobAction(id, action) {
-  await fetch(`http://localhost:5050/api/jobs/${id}/${action}`, {method:"POST"});
-}
-
-async function piJobAction(id, action) {
-  try { await fetch(`${PI_URL}/api/jobs/${id}/${action}`, {method:"POST"}); } catch(e) {}
-}
-
-async function startAll() {
-  setOrb("waking");
-  await fetch("http://localhost:5050/api/start_all", {method:"POST"});
-  try { await fetch(`${PI_URL}/api/start_all`, {method:"POST"}); } catch(e) {}
-  setTimeout(()=>setOrb("idle"), 2000);
-}
-async function stopAll() {
-  await fetch("http://localhost:5050/api/stop_all", {method:"POST"});
-  try { await fetch(`${PI_URL}/api/stop_all`, {method:"POST"}); } catch(e) {}
-  setOrb("error");
-}
-async function restartAll() { setOrb("waking"); await stopAll(); setTimeout(startAll, 800); }
-
-// ── Log panel ──────────────────────────────────────────────────────────────
-const LOG_MAX = 200;
-
-function appendLog(job, line, ts) {
-  const el  = document.getElementById("log-output");
-  const div = document.createElement("div");
-
-  let cls = "log-line " + job;
-  if (line.includes("✅") || line.includes("posted")) cls += " posted";
-  if (line.includes("rejected") || line.includes("error") || line.includes("Error")) cls += " rejected";
-
-  div.className = cls;
-  div.innerHTML = `<span class="ts">${ts||""}</span><span class="job-tag">[${job}]</span>${escHtml(line)}`;
-  el.appendChild(div);
-
-  // Trim old lines
-  while (el.children.length > LOG_MAX) el.removeChild(el.firstChild);
-
-  const container = document.getElementById("log-container");
-  container.scrollTop = container.scrollHeight;
-}
-
-function escHtml(s) {
-  return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
-}
-
-// ── Chat ───────────────────────────────────────────────────────────────────
-async function sendChat() {
-  const input = document.getElementById("chat-input");
-  const msg   = input.value.trim();
-  if (!msg) return;
-  input.value = "";
-
-  addChatMessage("jake", "Jake", msg);
-  setOrb("thinking");
-
-  try {
-    const resp = await fetch("http://localhost:5050/api/chat", {
-      method:  "POST",
-      headers: {"Content-Type":"application/json"},
-      body:    JSON.stringify({message: msg}),
-    });
-    const data = await resp.json();
-    setOrb("talking");
-    addChatMessage("echo", "Echo", data.reply || "(no response)");
-    setTimeout(() => setOrb("idle"), 2000);
-  } catch(e) {
-    addChatMessage("echo", "Echo", "(server unreachable)");
-    setOrb("error");
-  }
-}
-
-function addChatMessage(cls, speaker, text) {
-  const log = document.getElementById("chat-log");
-  const div = document.createElement("div");
-  div.className = `chat-msg ${cls}`;
-  div.innerHTML = `<div class="speaker">${speaker}</div><div class="body">${escHtml(text)}</div>`;
-  log.appendChild(div);
-  log.scrollTop = log.scrollHeight;
-}
-
-// ── Mic (Web Speech API) ───────────────────────────────────────────────────
-let recognition = null;
-let micActive   = false;
-
-function toggleMic() {
-  if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
-    addChatMessage("echo","Echo","Mic not supported in this browser. Use Chrome.");
-    return;
-  }
-  if (micActive) {
-    recognition && recognition.stop();
-    micActive = false;
-    document.getElementById("btn-mic").classList.remove("active");
-    document.getElementById("chat-input").placeholder = "Talk to Echo...";
-  } else {
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    recognition = new SR();
-    recognition.continuous    = false;
-    recognition.interimResults = false;
-    recognition.lang           = "en-US";
-    recognition.onresult = (e) => {
-      const transcript = e.results[0][0].transcript;
-      document.getElementById("chat-input").value = transcript;
-      sendChat();
-    };
-    recognition.onerror = (e) => {
-      if (e.error === "no-speech") return; // ignore silence, keep going
-      addChatMessage("echo","Echo",`Mic error: ${e.error}`);
-      micActive = false;
-      document.getElementById("btn-mic").classList.remove("active");
-      document.getElementById("chat-input").placeholder = "Talk to Echo...";
-    };
-    recognition.onend = () => {
-      if (micActive) {
-        // auto-restart so you don't have to click again
-        recognition.start();
-        document.getElementById("chat-input").placeholder = "Listening...";
-      } else {
-        document.getElementById("chat-input").placeholder = "Talk to Echo...";
-      }
-    };
-    recognition.start();
-    micActive = true;
-    document.getElementById("btn-mic").classList.add("active");
-    document.getElementById("chat-input").placeholder = "Listening...";
-  }
-}
-
-// ── Moltbook ───────────────────────────────────────────────────────────────
+// ── Moltbook ──────────────────────────────────────────────────────────────
 async function refreshMoltbook() {
   try {
     const resp = await fetch("http://localhost:5050/api/moltbook/stats");
     const data = await resp.json();
+
     document.getElementById("stat-karma").textContent     = data.karma     ?? "—";
     document.getElementById("stat-followers").textContent = data.followers  ?? "—";
     document.getElementById("stat-following").textContent = data.following  ?? "—";
     document.getElementById("stat-posts").textContent     = data.posts      ?? "—";
 
-    const notifEl = document.getElementById("molt-notifs");
-    notifEl.innerHTML = "";
-    const notifs = data.notifications || [];
-    if (!notifs.length) {
-      notifEl.innerHTML = `<div class="notif-item" style="color:var(--dim)">No recent notifications</div>`;
-    } else {
-      notifs.forEach(n => {
-        const div = document.createElement("div");
-        div.className = "notif-item";
-        div.textContent = n.message || n.text || JSON.stringify(n);
-        notifEl.appendChild(div);
-      });
+    const feed = document.getElementById("molt-activity");
+    feed.innerHTML = "";
+
+    const items = data.activity || [];
+    if (!items.length) {
+      feed.innerHTML = `<div class="activity-item" style="color:var(--dim)">No recent activity</div>`;
+      return;
     }
+
+    items.forEach(item => {
+      const div = document.createElement("div");
+      div.className = "activity-item";
+
+      const author = item.agent?.name || item.author?.name || item.author || item.username || "";
+      const type   = item.type || item.action || "";
+      const body   = item.body || item.message || item.text || item.content || item.post_title || "";
+
+      let html = "";
+      if (author) html += `<div class="activity-author">${escHtml(author)}</div>`;
+      if (type)   html += `<div class="activity-type">${escHtml(type)}</div>`;
+      if (body)   html += `<div>${escHtml(String(body).slice(0, 140))}</div>`;
+      if (!html)  html  = `<div style="color:var(--dim)">${escHtml(JSON.stringify(item).slice(0, 120))}</div>`;
+
+      div.innerHTML = html;
+      feed.appendChild(div);
+    });
   } catch(e) {
-    document.getElementById("molt-notifs").innerHTML = `<div class="notif-item" style="color:#ff4466">API unreachable</div>`;
+    document.getElementById("molt-activity").innerHTML =
+      `<div class="activity-item" style="color:#ff4466">Server unreachable</div>`;
   }
 }
 
 async function runMoltbookSession() {
-  await fetch("http://localhost:5050/api/moltbook/session", {method:"POST"});
-  appendLog("moltbook", "Manual session triggered", new Date().toLocaleTimeString("en-US",{hour12:false,hour:"2-digit",minute:"2-digit",second:"2-digit"}));
+  await fetch("http://localhost:5050/api/moltbook/session", {method: "POST"});
 }
 
 async function backupMemory(btn) {
-  const original = btn.textContent;
+  const orig = btn.textContent;
   btn.textContent = "Backing up...";
   btn.disabled = true;
   try {
-    const resp = await fetch("http://localhost:5050/api/memory/backup", {method:"POST"});
+    const resp = await fetch("http://localhost:5050/api/memory/backup", {method: "POST"});
     const data = await resp.json();
     btn.textContent = data.status;
-    appendLog("moltbook", `[memory] ${data.status}`, new Date().toLocaleTimeString("en-US",{hour12:false,hour:"2-digit",minute:"2-digit",second:"2-digit"}));
   } catch(e) {
     btn.textContent = "error";
   }
-  setTimeout(() => { btn.textContent = original; btn.disabled = false; }, 4000);
+  setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 4000);
 }
 
-// ── Face canvas ────────────────────────────────────────────────────────────
-const canvas = document.getElementById("face-canvas");
-const ctx    = canvas.getContext("2d");
+// ── Project Dashboard ─────────────────────────────────────────────────────
+const DB_CARDS = {
+  lidar:   { title: 'LiDAR — 00 bytes',         desc: 'Motor confirmed spinning. Voltage divider installed, reading 2.47V at Pi Pin 10. But zero bytes coming through — signal not making it to the Pi.',         next: 'Reseat the junction wire at Pin 10. Physical connection is the most likely culprit. After reseat, run a quick serial read and confirm packets before moving on.' },
+  motor:   { title: 'Motor pigtail — one side dead', desc: 'After the chassis rewire one side stopped running. Suspected bad pigtail on the battery connector side.',                                               next: 'Inspect the pigtail on the dead side. Look for a loose crimp or broken wire at the connector. Reseat or replace before trying to run again.' },
+  gpu:     { title: 'RTX 5070 — RMA in progress', desc: 'GPU shipped to California around April 21. Everything that needs real inference speed (LLaVA, 3B/7B retrain, face recognition upgrade) is parked here.', next: 'Nothing to do but wait. While waiting: keep growing the fine-tune dataset so you\'re ready to retrain the moment it\'s back.' },
+  q1:      { title: 'Queue 1 · LiDAR fix',        desc: 'This is the first hardware task. Once LiDAR is sending valid packets everything else (obstacle avoidance, navigation) can build on top of it.',           next: 'Reseat Pin 10 junction wire → confirm serial data → obstacle avoidance integration unlocked.' },
+  q2:      { title: 'Queue 2 · Motor pigtail',     desc: 'One side of the chassis is dead after the rewire. Needs to be resolved before any real movement testing.',                                               next: 'Inspect the battery-side pigtail. Reseat or replace. Then test all 4 motors before moving on.' },
+  q3:      { title: 'Queue 3 · Obstacle avoidance', desc: 'Wire LiDAR output into drive.py so Echo stops automatically when something is in the path. Depends on LiDAR fix being done first.',                    next: 'Once LiDAR sends valid packets, integrate distance threshold into drive.py motor logic.' },
+  q4:      { title: 'Queue 4 · Custom wake word',   desc: 'Swap out "Hey Jarvis" for a custom "Echo" trigger so the name matches the identity.',                                                                   next: 'Train or source a lightweight wake word model for "Echo". Integrate into the existing voice pipeline.' },
+  q5:      { title: 'Queue 5–6 · Screen + mic/speaker', desc: '3.5" OSOYOO screen is in the box ready to mount. SunFounder mic and HONKYOB speaker also on hand. Both go on chassis.',                           next: 'Mount screen first, confirm display works. Then swap mic/speaker and re-test voice pipeline end to end.' },
+  q6:      { title: 'Queue 7–9 · Voices, camera, bingo', desc: 'After mic swap: re-enroll all 7 voice profiles. Mount the $3 pan/tilt IP camera as chassis eyes. Set up bingo caller on Pi 4 for Thursday nights.', next: 'Do voice enrollment immediately after mic swap while setup is fresh. Camera mount and bingo caller can happen in parallel.' },
+  llava:   { title: 'LLaVA — real-time camera descriptions', desc: '3060 is too slow — timing gap breaks the voice sync. 5070 will handle it. Goal: Echo actually describes what she sees out loud, not just "motion detected."', next: 'Waiting on GPU. Dataset growth in the meantime.' },
+  retrain: { title: 'Retrain Echo — 3B or 7B base', desc: 'Current model is Qwen2.5-1.5B. With 2000+ examples and the 5070, stepping up to 3B or 7B is realistic with 5–6 epochs.',                              next: 'Build dataset to 2000+ while waiting. Retrain immediately when GPU returns.' },
+  dataset: { title: 'Fine-tune dataset — grow to 2000+', desc: 'Currently at 1009 examples. This one doesn\'t need the GPU — it can happen any time.',                                                              next: 'Add new source files to SOURCE_FILES in build_dataset.py. Can run on any session.' },
+  someday: { title: 'Long-game ideas',              desc: 'Mecanum wheel chassis (~$60-70), ELEGOO Robot Car #2 (~$50), 3D printer (pending spousal approval), AI chatroom with Brent\'s AI, emotion states + LED mood lighting, Echo intro song production, Selah YouTube b-roll from chassis footage.', next: 'These stay in the ideas bin until the active queue clears. Nothing to action right now.' }
+};
 
-let faceState     = "idle";
-let blinkT        = 0;
-let blinkOpen     = 1.0;   // 1 = fully open, 0 = closed
-let blinkDir      = -1;
-let mouthOpen     = 0;
-let mouthDir      = 1;
-let pupilOffsetX  = 0;
-let pupilOffsetY  = 0;
-let pupilTargetX  = 0;
-let pupilTargetY  = 0;
-let frame         = 0;
-
-function setFaceState(state) { faceState = state; }
-
-function drawFace() {
-  ctx.clearRect(0, 0, 160, 160);
-  frame++;
-
-  const cx = 80, cy = 80;
-
-  // ── Head glow ──
-  const headColor = { idle:"#1a1a4a", talking:"#1a3a2a", thinking:"#2a1a3a", error:"#3a1a1a", waking:"#2a2a4a" }[faceState] || "#1a1a4a";
-  const glowColor = { idle:"rgba(68,136,255,0.15)", talking:"rgba(68,255,170,0.15)", thinking:"rgba(200,68,255,0.15)", error:"rgba(255,34,68,0.15)", waking:"rgba(255,255,255,0.2)" }[faceState] || "rgba(68,136,255,0.15)";
-
-  const headGrad = ctx.createRadialGradient(cx-20, cy-20, 10, cx, cy, 65);
-  headGrad.addColorStop(0, headColor);
-  headGrad.addColorStop(1, "#080810");
-
-  ctx.beginPath();
-  ctx.ellipse(cx, cy, 62, 68, 0, 0, Math.PI*2);
-  ctx.fillStyle = headGrad;
-  ctx.fill();
-
-  ctx.beginPath();
-  ctx.ellipse(cx, cy, 62, 68, 0, 0, Math.PI*2);
-  ctx.strokeStyle = glowColor.replace("0.15","0.5");
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
-
-  // ── Blink logic ──
-  blinkT++;
-  const blinkInterval = faceState === "idle" ? 160 : faceState === "talking" ? 200 : 120;
-  if (blinkT > blinkInterval) {
-    blinkOpen += blinkDir * 0.15;
-    if (blinkOpen <= 0) { blinkOpen = 0; blinkDir = 1; }
-    if (blinkOpen >= 1) { blinkOpen = 1; blinkDir = -1; blinkT = 0; }
-  }
-
-  // ── Pupil wander (idle/thinking) ──
-  if (frame % 80 === 0) {
-    if (faceState === "idle") {
-      pupilTargetX = (Math.random() - 0.5) * 5;
-      pupilTargetY = (Math.random() - 0.5) * 3;
-    } else if (faceState === "thinking") {
-      pupilTargetX = (Math.random() - 0.5) * 10;
-      pupilTargetY = -2;
-    } else {
-      pupilTargetX = 0; pupilTargetY = 0;
-    }
-  }
-  pupilOffsetX += (pupilTargetX - pupilOffsetX) * 0.05;
-  pupilOffsetY += (pupilTargetY - pupilOffsetY) * 0.05;
-
-  // ── Eyes ──
-  const eyeY   = cy - 10;
-  const eyeLX  = cx - 22;
-  const eyeRX  = cx + 22;
-  const eyeRX2 = 14;
-  const eyeRY  = 14;
-  const eyeColor = { idle:"#4488ff", talking:"#44ffaa", thinking:"#cc44ff", error:"#ff4466", waking:"#ffffff" }[faceState] || "#4488ff";
-
-  [eyeLX, eyeRX].forEach(ex => {
-    // Sclera
-    ctx.beginPath();
-    ctx.ellipse(ex, eyeY, eyeRX2, eyeRY * blinkOpen, 0, 0, Math.PI*2);
-    ctx.fillStyle = "#0a0a1a";
-    ctx.fill();
-
-    // Iris
-    if (blinkOpen > 0.1) {
-      const irisR = Math.min(8, eyeRY * blinkOpen * 0.7);
-      ctx.beginPath();
-      ctx.ellipse(ex + pupilOffsetX, eyeY + pupilOffsetY, irisR, irisR * blinkOpen, 0, 0, Math.PI*2);
-      ctx.fillStyle = eyeColor;
-      ctx.fill();
-
-      // Pupil
-      const pupR = irisR * 0.45;
-      ctx.beginPath();
-      ctx.ellipse(ex + pupilOffsetX, eyeY + pupilOffsetY, pupR, pupR * blinkOpen, 0, 0, Math.PI*2);
-      ctx.fillStyle = "#000010";
-      ctx.fill();
-
-      // Catchlight
-      ctx.beginPath();
-      ctx.ellipse(ex + pupilOffsetX - 3, eyeY + pupilOffsetY - 3, 2, 2, 0, 0, Math.PI*2);
-      ctx.fillStyle = "rgba(255,255,255,0.7)";
-      ctx.fill();
-    }
-
-    // Eyelid
-    ctx.beginPath();
-    ctx.ellipse(ex, eyeY, eyeRX2 + 1, (eyeRY + 1) * blinkOpen, 0, 0, Math.PI*2);
-    ctx.strokeStyle = eyeColor + "88";
-    ctx.lineWidth = 1;
-    ctx.stroke();
-  });
-
-  // ── Mouth ──
-  const mouthY  = cy + 28;
-  const mouthW  = 28;
-
-  if (faceState === "talking") {
-    mouthOpen += mouthDir * 0.08;
-    if (mouthOpen >= 1) mouthDir = -1;
-    if (mouthOpen <= 0) mouthDir = 1;
-  } else {
-    mouthOpen += (0 - mouthOpen) * 0.1;
-  }
-
-  const smile = faceState === "error" ? -0.3 : 0.4;
-  const openH = mouthOpen * 10;
-
-  ctx.beginPath();
-  ctx.moveTo(cx - mouthW, mouthY);
-  ctx.quadraticCurveTo(cx, mouthY + smile * 18 + openH, cx + mouthW, mouthY);
-  if (openH > 1) {
-    ctx.quadraticCurveTo(cx, mouthY + smile * 18 - openH, cx - mouthW, mouthY);
-    ctx.fillStyle = "#000010";
-    ctx.fill();
-  }
-  const mouthColor = { idle:"#4488ff88", talking:"#44ffaa", thinking:"#cc44ff88", error:"#ff446688", waking:"#ffffff88" }[faceState] || "#4488ff88";
-  ctx.strokeStyle = mouthColor;
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
-
-  requestAnimationFrame(drawFace);
+function dbShow(id) {
+  const c = DB_CARDS[id];
+  if (!c) return;
+  const area = document.getElementById('db-modal-area');
+  area.innerHTML = `
+    <div class="db-modal-bg" onclick="dbClose(event)">
+      <div class="db-modal">
+        <h3>${c.title}</h3>
+        <p>${c.desc}</p>
+        <div class="db-next"><strong>Next action</strong>${c.next}</div>
+        <button class="db-close-btn" onclick="dbClose()">Close</button>
+      </div>
+    </div>`;
 }
 
-// ── Polling ────────────────────────────────────────────────────────────────
-async function pollState() {
-  try {
-    const resp = await fetch("http://localhost:5050/api/state");
-    const data = await resp.json();
-    const em   = data.emotion || "warm";
-    const map  = { warm:"idle", curious:"thinking", excited:"talking", concerned:"error", alert:"idle" };
-    setOrb(map[em] || "idle");
-  } catch(e) {}
+function dbClose(e) {
+  if (!e || e.target.classList.contains('db-modal-bg') || e.currentTarget === e.target) {
+    document.getElementById('db-modal-area').innerHTML = '';
+  }
 }
 
-// ── Fullscreen ─────────────────────────────────────────────────────────────
+// ── Utilities ─────────────────────────────────────────────────────────────
+function escHtml(s) {
+  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+// ── Fullscreen ────────────────────────────────────────────────────────────
 function toggleFullscreen() {
-  const btn = document.getElementById("btn-fullscreen");
   if (!document.fullscreenElement) {
     document.documentElement.requestFullscreen();
-    btn.textContent = "✕";
+    document.getElementById("btn-fullscreen").textContent = "✕";
   } else {
     document.exitFullscreen();
-    btn.textContent = "⛶";
+    document.getElementById("btn-fullscreen").textContent = "⛶";
   }
 }
 document.addEventListener("fullscreenchange", () => {
@@ -938,71 +759,9 @@ document.addEventListener("fullscreenchange", () => {
   if (btn) btn.textContent = document.fullscreenElement ? "✕" : "⛶";
 });
 
-// ── Init ───────────────────────────────────────────────────────────────────
-initJobs().then(() => pollPiStatus());
+// ── Init ──────────────────────────────────────────────────────────────────
 refreshMoltbook();
-drawFace();
-pollState();
 setInterval(refreshMoltbook, 60000);
-setInterval(pollState, 10000);
-setInterval(pollPiStatus, 5000);
-
-// ── Awareness settings modal ───────────────────────────────────────────────
-async function openAwareness() {
-  let cfg = {};
-  try {
-    const r = await fetch("http://localhost:5050/api/awareness/config");
-    cfg = await r.json();
-  } catch(e) {}
-
-  const qh  = cfg.quiet_hours  || {start:23, end:7};
-  const cd  = cfg.camera_cooldown_seconds || 300;
-  const vip = (cfg.vip_faces || []).join(", ");
-  const fdc = (cfg.front_door_cameras || []).join(", ");
-
-  const modal = document.createElement("div");
-  modal.id = "awareness-modal";
-  modal.style.cssText = `position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:1000;`;
-  modal.innerHTML = `
-    <div style="background:#111;border:1px solid var(--cyan);border-radius:12px;padding:24px;min-width:340px;max-width:440px;color:var(--text);">
-      <div style="font-size:0.6rem;letter-spacing:3px;text-transform:uppercase;color:var(--cyan);margin-bottom:16px;">⚙ Awareness Settings</div>
-      <label style="display:block;font-size:0.7rem;color:var(--dim);margin-bottom:4px;">QUIET HOURS (no announcements except unknown persons)</label>
-      <div style="display:flex;gap:8px;margin-bottom:12px;">
-        <input id="aw-qh-start" type="number" min="0" max="23" value="${qh.start}" style="width:60px;background:#1a1a1a;border:1px solid var(--dim);color:var(--text);padding:4px;border-radius:4px;">
-        <span style="color:var(--dim);line-height:2">to</span>
-        <input id="aw-qh-end" type="number" min="0" max="23" value="${qh.end}" style="width:60px;background:#1a1a1a;border:1px solid var(--dim);color:var(--text);padding:4px;border-radius:4px;">
-        <span style="color:var(--dim);font-size:0.65rem;line-height:2">(24h format)</span>
-      </div>
-      <label style="display:block;font-size:0.7rem;color:var(--dim);margin-bottom:4px;">CAMERA COOLDOWN (seconds between same-camera announcements)</label>
-      <input id="aw-cooldown" type="number" min="30" max="3600" value="${cd}" style="width:80px;background:#1a1a1a;border:1px solid var(--dim);color:var(--text);padding:4px;border-radius:4px;margin-bottom:12px;">
-      <label style="display:block;font-size:0.7rem;color:var(--dim);margin-bottom:4px;">FRONT DOOR CAMERAS (comma separated, exact camera names)</label>
-      <input id="aw-fdc" type="text" value="${escHtml(fdc)}" placeholder="Front Camera, Driveway" style="width:100%;box-sizing:border-box;background:#1a1a1a;border:1px solid var(--dim);color:var(--text);padding:4px;border-radius:4px;margin-bottom:12px;">
-      <label style="display:block;font-size:0.7rem;color:var(--dim);margin-bottom:4px;">VIP FACES (always announce, comma separated)</label>
-      <input id="aw-vip" type="text" value="${escHtml(vip)}" placeholder="jake, rachael" style="width:100%;box-sizing:border-box;background:#1a1a1a;border:1px solid var(--dim);color:var(--text);padding:4px;border-radius:4px;margin-bottom:20px;">
-      <div style="display:flex;gap:8px;justify-content:flex-end;">
-        <button class="btn-tiny" onclick="document.getElementById('awareness-modal').remove()">Cancel</button>
-        <button class="btn-tiny" style="border-color:var(--cyan);color:var(--cyan)" onclick="saveAwareness()">Save</button>
-      </div>
-    </div>`;
-  document.body.appendChild(modal);
-  modal.addEventListener("click", e => { if(e.target===modal) modal.remove(); });
-}
-
-async function saveAwareness() {
-  const cfg = {
-    quiet_hours: {
-      start: parseInt(document.getElementById("aw-qh-start").value),
-      end:   parseInt(document.getElementById("aw-qh-end").value),
-    },
-    camera_cooldown_seconds: parseInt(document.getElementById("aw-cooldown").value),
-    front_door_cameras: document.getElementById("aw-fdc").value.split(",").map(s=>s.trim()).filter(Boolean),
-    vip_faces: document.getElementById("aw-vip").value.split(",").map(s=>s.trim().toLowerCase()).filter(Boolean),
-  };
-  try {
-    await fetch(`http://localhost:5050/api/awareness/save?data=${encodeURIComponent(JSON.stringify(cfg))}`);
-    document.getElementById("awareness-modal").remove();
-  } catch(e) { alert("Save failed: " + e.message); }
-}
 </script>
 </body>
 </html>

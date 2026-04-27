@@ -326,11 +326,145 @@ def api_memory_backup():
         return jsonify({"status": f"error — {e}"}), 500
 
 
+# ── Webcam intelligence routes ────────────────────────────────────────────
+
+_latest_webcam_event = {}
+
+@app.route("/api/webcam/event", methods=["POST"])
+def api_webcam_event():
+    global _latest_webcam_event
+    event = request.get_json(silent=True) or {}
+    _latest_webcam_event = event
+    # Emit to GUI via Socket.IO so dashboard can react in real time
+    sio.emit("webcam_event", event)
+    # Greet known people via voice if newly seen
+    known = event.get("presence", {}).get("known_ids", [])
+    for person in known:
+        sio.emit("job_log", {"job": "blink", "line": f"[webcam] {person} at desk", "ts": datetime.now().strftime("%H:%M:%S")})
+    return jsonify({"status": "ok"})
+
+@app.route("/api/webcam/latest")
+def api_webcam_latest():
+    return jsonify(_latest_webcam_event)
+
+
 # ── Echo state route ───────────────────────────────────────────────────────
 
 @app.route("/api/state")
 def api_state():
     return jsonify({"emotion": "warm", "baseline": "warm"})
+
+
+# ── Awareness dashboard routes ─────────────────────────────────────────────
+
+@app.route("/awareness")
+def serve_awareness():
+    return send_from_directory(BASE_DIR, "awareness.html")
+
+@app.route("/blink/clip/<path:filename>")
+def serve_blink_clip(filename):
+    clip_dir = os.path.join(BASE_DIR, "cache", "blink", "clips")
+    return send_from_directory(clip_dir, filename)
+
+@app.route("/api/awareness/events")
+def api_awareness_events():
+    events = []
+    try:
+        files = sorted(
+            [f for f in os.listdir(BLINK_EVENTS_DIR) if f.endswith(".json") and f != "latest_event.json"],
+            reverse=True
+        )
+        for fname in files[:60]:
+            try:
+                with open(os.path.join(BLINK_EVENTS_DIR, fname), encoding="utf-8") as f:
+                    ev = json.load(f)
+                if ev.get("thumbnail"):
+                    ev["thumb_file"] = os.path.basename(ev["thumbnail"])
+                if ev.get("clip"):
+                    ev["clip_file"] = os.path.basename(ev["clip"])
+                events.append(ev)
+            except Exception:
+                pass
+    except Exception as e:
+        print(f"[awareness] events error: {e}")
+    return jsonify({"events": events})
+
+@app.route("/api/awareness/health")
+def api_awareness_health():
+    try:
+        health_file = os.path.join(BASE_DIR, "cache", "blink", "camera_health.json")
+        with open(health_file, encoding="utf-8") as f:
+            return jsonify(json.load(f))
+    except Exception:
+        return jsonify({})
+
+@app.route("/api/awareness/household")
+def api_awareness_household():
+    try:
+        ctx_file = os.path.join(BASE_DIR, "cache", "blink", "echo_context.json")
+        with open(ctx_file, encoding="utf-8") as f:
+            data = json.load(f)
+        household    = data.get("household", {})
+        now          = time.time()
+        presence_ttl = 4 * 3600
+        people = []
+        for person, ts in sorted(household.items(), key=lambda x: x[1], reverse=True):
+            age = now - ts
+            if age < presence_ttl:
+                people.append({
+                    "name":       person,
+                    "last_seen":  datetime.fromtimestamp(ts).strftime("%I:%M %p"),
+                    "minutes_ago": int(age / 60),
+                })
+        return jsonify({"home": people})
+    except Exception:
+        return jsonify({"home": []})
+
+@app.route("/api/awareness/summary")
+def api_awareness_summary():
+    try:
+        today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
+        events = []
+        for fname in sorted(os.listdir(BLINK_EVENTS_DIR)):
+            if not fname.endswith(".json") or fname == "latest_event.json":
+                continue
+            try:
+                with open(os.path.join(BLINK_EVENTS_DIR, fname), encoding="utf-8") as f:
+                    ev = json.load(f)
+                if ev.get("timestamp", 0) > today_start:
+                    events.append(ev)
+            except Exception:
+                pass
+
+        if not events:
+            return jsonify({"summary": "No camera events today.", "event_count": 0, "cameras": []})
+
+        by_camera = {}
+        for ev in events:
+            cam = ev.get("camera", "unknown")
+            by_camera.setdefault(cam, []).append(ev)
+
+        digest_lines = []
+        for cam, cam_events in sorted(by_camera.items()):
+            times = [datetime.fromtimestamp(e["timestamp"]).strftime("%I:%M %p") for e in cam_events]
+            sample = ", ".join(times[:6]) + ("..." if len(times) > 6 else "")
+            digest_lines.append(f"{cam}: {len(cam_events)} events — {sample}")
+        digest = "\n".join(digest_lines)
+
+        prompt = (
+            f"You are Echo. Here is today's camera event log for Jake's house:\n\n{digest}\n\n"
+            f"Write a 3-5 sentence summary of the day's activity around the house. "
+            f"Mention patterns, anything unusual, quiet stretches. "
+            f"Speak like you were actually watching all day. Direct, no filler.\n\nEcho:"
+        )
+        resp = requests.post(OLLAMA_URL, json={"model": OLLAMA_MODEL, "prompt": prompt, "stream": False}, timeout=30)
+        summary = resp.json().get("response", "").strip()
+        if summary.lower().startswith("echo:"):
+            summary = summary[5:].strip()
+
+        return jsonify({"summary": summary, "event_count": len(events), "cameras": list(by_camera.keys())})
+    except Exception as e:
+        return jsonify({"summary": f"Summary unavailable — {e}", "event_count": 0, "cameras": []})
 
 
 # ── Live feed routes ───────────────────────────────────────────────────────

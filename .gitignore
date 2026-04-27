@@ -10,3 +10,34 @@ memory.json
 moltbook_posted.json
 moltbook_pushed.json
 moltbook_replied.json
+
+# Secrets / tokens
+Echo Discord Token.txt
+*.token
+*creds*.json
+
+# Large model files
+*.gguf
+*.bin
+*.safetensors
+llama.cpp/
+xtts_models/
+echo_merged_local/
+echo_lora_download/
+unsloth_compiled_cache/
+Qwen2.5-7B-Instruct.Q4_K_M.gguf
+
+# Training data (large)
+echo_dataset.json
+echo_colab.txt
+
+# Personal photos / known faces
+known_faces/
+IMG_*.jpeg
+IMG_*.jpg
+
+# Misc
+python
+Echo_Memory.txt
+latest_heartbeat.json
+boot cmds jake dumbass.txt

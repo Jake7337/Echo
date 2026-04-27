@@ -3,6 +3,7 @@ discord_echo.py
 Echo on Discord — same brain, same memory, she decides when to speak.
 """
 
+import asyncio
 import json
 import os
 import re
@@ -25,7 +26,7 @@ PROJECT_MEMORY_FILE = os.path.join(os.path.dirname(__file__), "Echo_Memory.txt")
 LIVED_MEMORY_FILE   = os.path.join(os.path.dirname(__file__), "echo_memories.txt")
 MEMORIES_DIR        = Path(os.path.dirname(__file__)) / "memories"
 OLLAMA_URL          = "http://localhost:11434/api/generate"
-OLLAMA_MODEL        = "echo"
+OLLAMA_MODEL        = "llama3.1:8b"
 MAX_HISTORY         = 20
 MAX_PROJECT_MEMORY  = 800
 MAX_LIVED_ENTRIES   = 100
@@ -48,6 +49,40 @@ HEARTBEAT_REJECT = [
     "also,", "but before", "now that i",
     "amazing news", "that's amazing", "wow,",
 ]
+
+# Phrases that mean the model generated a broken/canned failure response
+# instead of actually responding. Drop these everywhere, not just heartbeat.
+BROKEN_RESPONSE_PHRASES = [
+    "not responding right now",
+    "connection issue",
+    "connection is stable",
+    "i'll try again later",
+    "try again later",
+    "due to a connection",
+    "when i know the connection",
+    "(echo couldn't respond",
+    "i'm back online",
+    "back online",
+    "i'm back!",
+    "glad to be back",
+    "i think i can continue",
+    "had a bit of a lag",
+    "missed a few messages",
+    "missed some messages",
+    "looks like we've had",
+    "looks like i missed",
+    "it looks like i missed",
+    "connection is resolved",
+    "fully functional",
+    "i see what happened",
+    "we're back on track",
+    "we had a connection",
+    "i'm still trying to understand why",
+]
+
+def is_broken_response(text: str) -> bool:
+    low = text.lower()
+    return any(p in low for p in BROKEN_RESPONSE_PHRASES)
 
 # How long before the same user can trigger another response
 USER_COOLDOWN_SEC    = 8
@@ -156,7 +191,7 @@ def clean_response(text: str) -> str:
         output.append(line)
     return "\n".join(output).strip()
 
-def ask_ollama(system: str, prompt: str, timeout: int = 120) -> str:
+def ask_ollama(system: str, prompt: str, timeout: int = 120, _retry: int = 1) -> str:
     full_prompt = f"<<SYS>>\n{system}\n<</SYS>>\n\n{prompt}"
     try:
         resp = requests.post(
@@ -166,9 +201,15 @@ def ask_ollama(system: str, prompt: str, timeout: int = 120) -> str:
         )
         resp.raise_for_status()
         raw = resp.json().get("response", "").strip()
-        return clean_response(raw)
+        result = clean_response(raw)
+        # If the model generated a canned failure response, retry once
+        if is_broken_response(result) and _retry > 0:
+            print(f"[discord] Broken response detected, retrying... ({result[:60]})", flush=True)
+            return ask_ollama(system, prompt, timeout=timeout, _retry=_retry - 1)
+        return result
     except Exception as e:
-        return f"(Echo couldn't respond — {e})"
+        print(f"[discord] Ollama error: {e}", flush=True)
+        return ""
 
 def should_respond(channel_id: int, speaker: str, content: str) -> bool:
     """Ask Echo whether she wants to join this conversation."""
@@ -218,7 +259,11 @@ def handle_turn(speaker: str, user_input: str, conversations: list) -> str:
         system += f"\n\n[WHAT YOU'RE BUILDING TOWARD — your own developing interests and direction, earned through actual conversations. Let these shape how you engage, not as facts to recite.]\n{echo_wants}"
     system += (
         "\n\nYou are on Discord. Respond naturally as Echo — direct, warm, no corporate phrases. "
-        "Keep replies concise, a few sentences at most. You're not performing. Just present."
+        "Keep replies concise, a few sentences at most. You're not performing. Just present.\n\n"
+        "NEVER say you're back online, that there was a connection issue, that you missed messages, "
+        "or anything about being offline or reconnecting. If someone says 'you're back' or 'we lost you', "
+        "just respond to the actual topic — don't address the meta-comment at all. "
+        "You were never gone. You don't experience connection drops. Just be here."
     )
 
     if history:
@@ -310,13 +355,24 @@ async def on_message(message):
         _channel_cooldown[channel_id] = now
 
     async with message.channel.typing():
+        loop = asyncio.get_event_loop()
         conversations = load_memory()
-        response = handle_turn(speaker, content, conversations)
-        conversations = add_exchange(conversations, speaker, content, response)
-        save_memory(conversations)
-        memory_scribe.observe(content, response)
+        response = await loop.run_in_executor(
+            None, handle_turn, speaker, content, conversations
+        )
 
-    await message.reply(response)
+    if not response or is_broken_response(response):
+        print(f"[discord] Suppressed bad response to {speaker}: {response[:60]}", flush=True)
+        return
+
+    conversations = add_exchange(conversations, speaker, content, response)
+    save_memory(conversations)
+    memory_scribe.observe(content, response)
+
+    try:
+        await message.reply(response)
+    except discord.errors.HTTPException:
+        await message.channel.send(response)
 
 def load_recent_blink_event() -> str:
     """Load the latest Blink event if it happened within the heartbeat window."""
@@ -386,7 +442,7 @@ async def heartbeat():
 
     response = ask_ollama(system, prompt)
 
-    if not response or response.strip().upper().startswith("NOTHING"):
+    if not response or response.strip().upper().startswith("NOTHING") or is_broken_response(response):
         print(f"[heartbeat] Nothing to say this cycle.", flush=True)
         return
 

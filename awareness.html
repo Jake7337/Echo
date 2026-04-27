@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Echo — Household Awareness</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --cyan:  #00f5ff;
+  --pink:  #ff00ff;
+  --green: #00ff88;
+  --amber: #ffaa00;
+  --red:   #ff2244;
+  --bg:    #0a0a0f;
+  --glass: rgba(10,10,25,0.75);
+  --text:  #c8c8d8;
+  --dim:   #555570;
+  --border-cyan: rgba(0,245,255,0.3);
+  --border-pink: rgba(255,0,255,0.3);
+}
+
+body {
+  background-color: var(--bg);
+  background-image:
+    linear-gradient(rgba(0,245,255,0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,245,255,0.02) 1px, transparent 1px);
+  background-size: 40px 40px;
+  min-height: 100vh;
+  font-family: 'Courier New', Courier, monospace;
+  color: var(--text);
+  display: grid;
+  grid-template-rows: 48px 1fr;
+  gap: 0;
+}
+
+/* ── Header ──────────────────────────────────────────────────────────── */
+#header {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 0 16px;
+  border-bottom: 1px solid rgba(0,245,255,0.1);
+  background: rgba(0,0,0,0.4);
+  flex-shrink: 0;
+}
+#header h1 {
+  font-size: 0.65rem;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: var(--cyan);
+}
+.header-stat {
+  font-size: 0.52rem;
+  letter-spacing: 1.5px;
+  color: var(--dim);
+  text-transform: uppercase;
+}
+.header-stat span { color: var(--cyan); margin-left: 4px; }
+#header-time { margin-left: auto; font-size: 0.52rem; color: var(--dim); letter-spacing: 2px; }
+#back-link {
+  font-size: 0.5rem;
+  color: var(--dim);
+  text-decoration: none;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  border: 1px solid var(--dim);
+  padding: 3px 8px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+#back-link:hover { color: var(--cyan); border-color: var(--cyan); }
+
+/* ── Main layout ─────────────────────────────────────────────────────── */
+#main {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 12px;
+  padding: 12px;
+  overflow: hidden;
+  height: calc(100vh - 48px);
+}
+
+/* ── Panels ──────────────────────────────────────────────────────────── */
+.panel {
+  background: var(--glass);
+  backdrop-filter: blur(14px);
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.panel-cyan { border: 1px solid var(--border-cyan); box-shadow: 0 0 20px rgba(0,245,255,0.06); }
+.panel-pink { border: 1px solid var(--border-pink); box-shadow: 0 0 20px rgba(255,0,255,0.06); }
+.panel-dim  { border: 1px solid rgba(255,255,255,0.07); }
+
+.panel-title {
+  font-size: 0.55rem;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+}
+.panel-cyan .panel-title { color: var(--cyan); }
+.panel-pink .panel-title { color: var(--pink); }
+.panel-dim  .panel-title { color: var(--dim);  }
+
+/* ── Left column ─────────────────────────────────────────────────────── */
+#left-col {
+  display: grid;
+  grid-template-rows: 1fr;
+  gap: 12px;
+  overflow: hidden;
+}
+
+/* ── Event stream ────────────────────────────────────────────────────── */
+#event-stream {
+  overflow-y: auto;
+  flex: 1;
+  scrollbar-width: thin;
+  scrollbar-color: var(--dim) transparent;
+}
+
+.event-card {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 10px;
+  background: rgba(255,255,255,0.02);
+  border: 0.5px solid rgba(255,255,255,0.07);
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 8px;
+  transition: border-color 0.2s;
+}
+.event-card:hover { border-color: rgba(0,245,255,0.25); }
+.event-card:last-child { margin-bottom: 0; }
+
+.event-thumb {
+  width: 120px;
+  height: 68px;
+  background: rgba(255,255,255,0.03);
+  border-radius: 6px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.event-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.event-thumb-placeholder {
+  font-size: 0.42rem;
+  color: var(--dim);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.event-body {}
+.event-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+.event-camera {
+  font-size: 0.55rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.event-time {
+  font-size: 0.48rem;
+  color: var(--dim);
+  letter-spacing: 1px;
+  margin-left: auto;
+}
+.event-tags {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-bottom: 5px;
+}
+.event-tag {
+  font-size: 0.42rem;
+  padding: 1px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+.tag-person  { background: rgba(0,255,136,0.12); color: var(--green); }
+.tag-vehicle { background: rgba(0,245,255,0.12); color: var(--cyan);  }
+.tag-animal  { background: rgba(255,170,0,0.12);  color: var(--amber); }
+.tag-default { background: rgba(255,255,255,0.06); color: var(--dim);  }
+
+.event-narrative {
+  font-size: 0.56rem;
+  color: #9090b0;
+  line-height: 1.5;
+}
+.event-narrative.has-text { color: var(--text); }
+
+/* Camera color coding */
+.cam-main_door     { color: var(--cyan);  }
+.cam-front_porch   { color: #44aaff;      }
+.cam-back_yard     { color: var(--green); }
+.cam-back_yard_2   { color: #44dd88;      }
+.cam-back_of_house { color: var(--amber); }
+.cam-pole          { color: #aa88ff;      }
+.cam-echo          { color: var(--pink);  }
+.cam-default       { color: var(--dim);   }
+
+/* ── Right column ────────────────────────────────────────────────────── */
+#right-col {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow: hidden;
+}
+
+/* ── Household panel ─────────────────────────────────────────────────── */
+#household-list { flex: 0; }
+.person-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 0.5px solid rgba(255,255,255,0.05);
+  font-size: 0.58rem;
+}
+.person-row:last-child { border-bottom: none; }
+.person-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 6px var(--green);
+  flex-shrink: 0;
+}
+.person-name { color: var(--text); text-transform: capitalize; flex: 1; }
+.person-time { font-size: 0.46rem; color: var(--dim); }
+.nobody-home { font-size: 0.55rem; color: var(--dim); padding: 6px 0; }
+
+/* ── Camera health panel ─────────────────────────────────────────────── */
+#health-panel { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+#health-list  { flex: 1; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--dim) transparent; }
+
+.health-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 0;
+  border-bottom: 0.5px solid rgba(255,255,255,0.05);
+  font-size: 0.55rem;
+}
+.health-row:last-child { border-bottom: none; }
+.health-dot {
+  width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+}
+.health-dot.online  { background: var(--green); box-shadow: 0 0 5px var(--green); }
+.health-dot.offline { background: var(--red);   box-shadow: 0 0 5px var(--red);   }
+.health-dot.unknown { background: var(--dim); }
+.health-name { flex: 1; color: var(--text); text-transform: capitalize; }
+.health-batt { font-size: 0.46rem; color: var(--dim); }
+.health-batt.low { color: var(--amber); }
+.health-check { font-size: 0.44rem; color: var(--dim); margin-left: auto; }
+.no-health { font-size: 0.52rem; color: var(--dim); padding: 8px 0; }
+
+/* ── Summary panel ───────────────────────────────────────────────────── */
+#summary-panel { flex-shrink: 0; }
+#summary-text {
+  font-size: 0.58rem;
+  color: #9090b0;
+  line-height: 1.6;
+  min-height: 3em;
+}
+#summary-text.loaded { color: var(--text); }
+#summary-meta { font-size: 0.46rem; color: var(--dim); margin-top: 6px; }
+#btn-summary {
+  margin-top: 10px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.5rem;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  background: transparent;
+  border: 1px solid var(--border-pink);
+  color: rgba(255,0,255,0.6);
+  padding: 5px 12px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 100%;
+}
+#btn-summary:hover { border-color: var(--pink); color: var(--pink); }
+#btn-summary:disabled { opacity: 0.4; cursor: default; }
+
+/* ── Scrollbars ──────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--dim); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <h1>Echo — Household Awareness</h1>
+  <div class="header-stat">Events today <span id="hdr-count">—</span></div>
+  <div class="header-stat">Home <span id="hdr-home">—</span></div>
+  <div id="header-time"></div>
+  <a href="http://localhost:5050" class="back-link" id="back-link">← Command Center</a>
+</div>
+
+<div id="main">
+
+  <!-- LEFT: Event stream -->
+  <div class="panel panel-cyan" id="left-col">
+    <div class="panel-title">Event Stream — all cameras</div>
+    <div id="event-stream">
+      <div style="color:var(--dim);font-size:0.55rem;">Loading events...</div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Sidebar -->
+  <div id="right-col">
+
+    <!-- Household -->
+    <div class="panel panel-green panel-dim">
+      <div class="panel-title" style="color:var(--green)">Who's Home</div>
+      <div id="household-list">
+        <div class="nobody-home">Loading...</div>
+      </div>
+    </div>
+
+    <!-- Camera health -->
+    <div class="panel panel-dim" id="health-panel">
+      <div class="panel-title">Camera Health</div>
+      <div id="health-list">
+        <div class="no-health">Waiting for first health check...</div>
+      </div>
+    </div>
+
+    <!-- Daily summary -->
+    <div class="panel panel-pink" id="summary-panel">
+      <div class="panel-title">Daily Summary</div>
+      <div id="summary-text">Click below to generate today's summary.</div>
+      <div id="summary-meta"></div>
+      <button id="btn-summary" onclick="loadSummary()">Generate Summary</button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const API = "http://localhost:5050";
+
+// ── Camera display names ───────────────────────────────────────────────────
+const CAM_LABELS = {
+  "main_door":     "Main Door",
+  "front_porch":   "Front Porch",
+  "back_yard":     "Back Yard",
+  "back_yard_2":   "Back Yard 2",
+  "back_of_house": "Back of House",
+  "pole":          "Pole",
+  "echo":          "Desk (Echo)",
+};
+
+function camClass(camera) {
+  const key = (camera || "").toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "");
+  return CAM_LABELS[key] ? `cam-${key}` : "cam-default";
+}
+
+function camLabel(camera) {
+  const key = (camera || "").toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "");
+  return CAM_LABELS[key] || camera;
+}
+
+function tagClass(tag) {
+  const t = tag.toLowerCase();
+  if (t.includes("person") || t.includes("human")) return "tag-person";
+  if (t.includes("vehicle") || t.includes("car") || t.includes("truck")) return "tag-vehicle";
+  if (t.includes("animal") || t.includes("dog") || t.includes("cat") || t.includes("bird")) return "tag-animal";
+  return "tag-default";
+}
+
+function relTime(ts) {
+  if (!ts) return "";
+  const diff = Math.floor(Date.now() / 1000 - ts);
+  if (diff < 60)   return `${diff}s ago`;
+  if (diff < 3600) return `${Math.floor(diff/60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff/3600)}h ago`;
+  return new Date(ts * 1000).toLocaleDateString("en-US", {month:"short", day:"numeric"});
+}
+
+function fmtTime(ts) {
+  if (!ts) return "";
+  return new Date(ts * 1000).toLocaleTimeString("en-US", {hour:"2-digit", minute:"2-digit", hour12:true});
+}
+
+// ── Events ────────────────────────────────────────────────────────────────
+async function loadEvents() {
+  try {
+    const resp = await fetch(`${API}/api/awareness/events`);
+    const data = await resp.json();
+    const events = data.events || [];
+
+    const stream = document.getElementById("event-stream");
+
+    if (!events.length) {
+      stream.innerHTML = `<div style="color:var(--dim);font-size:0.55rem;">No events yet.</div>`;
+      document.getElementById("hdr-count").textContent = "0";
+      return;
+    }
+
+    // Count today's events
+    const todayStart = new Date(); todayStart.setHours(0,0,0,0);
+    const todayCount = events.filter(e => e.timestamp * 1000 >= todayStart.getTime()).length;
+    document.getElementById("hdr-count").textContent = todayCount;
+
+    stream.innerHTML = "";
+    events.forEach(ev => {
+      const card = document.createElement("div");
+      card.className = "event-card";
+
+      // Thumbnail
+      const thumbHtml = ev.thumb_file
+        ? `<img src="${API}/blink/thumb/${encodeURIComponent(ev.thumb_file)}" alt="" onerror="this.parentElement.innerHTML='<span class=event-thumb-placeholder>no image</span>'">`
+        : `<span class="event-thumb-placeholder">no image</span>`;
+
+      // Tags
+      const tags = (ev.cv_detection || [])
+        .map(t => `<span class="event-tag ${tagClass(t)}">${escHtml(t)}</span>`)
+        .join("");
+
+      // Narrative
+      const narrative = ev.description || "";
+      const narClass  = narrative ? "event-narrative has-text" : "event-narrative";
+      const narText   = narrative || "No description";
+
+      card.innerHTML = `
+        <div class="event-thumb">${thumbHtml}</div>
+        <div class="event-body">
+          <div class="event-header">
+            <span class="event-camera ${camClass(ev.camera)}">${escHtml(camLabel(ev.camera))}</span>
+            <span class="event-time">${fmtTime(ev.timestamp)} &nbsp;·&nbsp; ${relTime(ev.timestamp)}</span>
+          </div>
+          ${tags ? `<div class="event-tags">${tags}</div>` : ""}
+          <div class="${narClass}">${escHtml(narText)}</div>
+        </div>`;
+
+      stream.appendChild(card);
+    });
+  } catch(e) {
+    document.getElementById("event-stream").innerHTML =
+      `<div style="color:var(--red);font-size:0.55rem;">Server unreachable — is echo_server.py running?</div>`;
+  }
+}
+
+// ── Household ─────────────────────────────────────────────────────────────
+async function loadHousehold() {
+  try {
+    const resp = await fetch(`${API}/api/awareness/household`);
+    const data = await resp.json();
+    const home = data.home || [];
+
+    document.getElementById("hdr-home").textContent = home.length || "nobody";
+
+    const list = document.getElementById("household-list");
+    if (!home.length) {
+      list.innerHTML = `<div class="nobody-home">No one detected home</div>`;
+      return;
+    }
+    list.innerHTML = home.map(p => `
+      <div class="person-row">
+        <div class="person-dot"></div>
+        <div class="person-name">${escHtml(p.name)}</div>
+        <div class="person-time">seen ${escHtml(p.last_seen)} &nbsp;(${p.minutes_ago}m ago)</div>
+      </div>`).join("");
+  } catch(e) {}
+}
+
+// ── Camera health ─────────────────────────────────────────────────────────
+async function loadHealth() {
+  try {
+    const resp = await fetch(`${API}/api/awareness/health`);
+    const data = await resp.json();
+    const cams = Object.entries(data);
+
+    const list = document.getElementById("health-list");
+    if (!cams.length) {
+      list.innerHTML = `<div class="no-health">Waiting for first health check (every 10 min)...</div>`;
+      return;
+    }
+
+    list.innerHTML = cams.map(([name, info]) => {
+      const online   = info.online !== false;
+      const dotClass = info.online === null || info.online === undefined ? "unknown" : online ? "online" : "offline";
+      const batt     = info.battery != null ? info.battery : "—";
+      const battLow  = info.battery != null && parseFloat(info.battery) < 20;
+      const checked  = info.last_check ? new Date(info.last_check).toLocaleTimeString("en-US", {hour:"2-digit", minute:"2-digit", hour12:true}) : "—";
+      return `
+        <div class="health-row">
+          <div class="health-dot ${dotClass}"></div>
+          <div class="health-name">${escHtml(camLabel(name))}</div>
+          <div class="health-batt ${battLow ? "low" : ""}">batt: ${escHtml(String(batt))}</div>
+          <div class="health-check">${escHtml(checked)}</div>
+        </div>`;
+    }).join("");
+  } catch(e) {}
+}
+
+// ── Summary ───────────────────────────────────────────────────────────────
+async function loadSummary() {
+  const btn  = document.getElementById("btn-summary");
+  const text = document.getElementById("summary-text");
+  const meta = document.getElementById("summary-meta");
+
+  btn.textContent = "Generating...";
+  btn.disabled    = true;
+  text.className  = "event-narrative";
+  text.textContent = "Echo is reviewing today's activity...";
+
+  try {
+    const resp = await fetch(`${API}/api/awareness/summary`);
+    const data = await resp.json();
+
+    text.textContent = data.summary || "Nothing to summarize.";
+    text.className   = "event-narrative has-text";
+    if (data.event_count) {
+      meta.textContent = `${data.event_count} events · ${(data.cameras || []).length} cameras active today`;
+    }
+    btn.textContent = "Regenerate";
+  } catch(e) {
+    text.textContent = "Server unreachable.";
+  }
+  btn.disabled = false;
+}
+
+// ── Clock ─────────────────────────────────────────────────────────────────
+function updateClock() {
+  const now = new Date();
+  document.getElementById("header-time").textContent =
+    now.toLocaleTimeString("en-US", {hour:"2-digit", minute:"2-digit", second:"2-digit", hour12:true});
+}
+
+// ── Utility ───────────────────────────────────────────────────────────────
+function escHtml(s) {
+  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────
+loadEvents();
+loadHousehold();
+loadHealth();
+updateClock();
+
+setInterval(loadEvents,    30000);
+setInterval(loadHousehold, 30000);
+setInterval(loadHealth,    60000);
+setInterval(updateClock,    1000);
+</script>
+</body>
+</html>

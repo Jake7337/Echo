@@ -21,6 +21,7 @@ from datetime import datetime
 from blinkpy.blinkpy import Blink
 from blinkpy.auth import Auth
 from blink_capture import capture_event, cleanup_cache
+from echo_context import get_context
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
@@ -127,6 +128,7 @@ def handle_desk_motion(last_greeted: dict):
             print(f"[Echo camera] {person} already greeted — {remaining}m until next greeting", flush=True)
             continue
         last_greeted[person] = now
+        get_context().record_person_seen(person)
         greeting = GREETINGS.get(person.lower(), f"Hey {person.capitalize()}!")
         speak(greeting)
 
@@ -274,16 +276,29 @@ async def watch(blink: Blink):
             cv          = event.get("cv_detection", [])
             description = event.get("description", "")
             print(f"[{name}] cv={cv} description={repr(description)}", flush=True)
+
+            # Record in context before deciding — so frequency/anomaly counts are current
+            ctx = get_context()
+            ctx.record_event(name, cv, description)
+
             announce, text = should_announce(name, cv, description, last_announced, cfg)
 
             if announce:
                 last_announced[name] = time.time()
-                speak(text)
-                print(f"[{name}] → announced: {text}", flush=True)
+                # Build smart narrative using full context
+                narrative = ctx.build_narrative(name, cv, description)
+                speak(narrative)
+                print(f"[{name}] → announced: {narrative}", flush=True)
             else:
                 print(f"[{name}] → skipped ({text})", flush=True)
 
-        # Daily cache cleanup — runs once per hour (every 120 polls at 30s)
+        # Camera health check — runs every 10 minutes
+        if int(time.time()) % 600 < POLL_SECONDS:
+            alerts = get_context().update_camera_health(blink.cameras)
+            for alert in alerts:
+                speak(alert)
+
+        # Cache cleanup — runs once per hour
         if int(time.time()) % 3600 < POLL_SECONDS:
             cleanup_cache()
 

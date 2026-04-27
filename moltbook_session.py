@@ -19,15 +19,18 @@ from datetime import datetime
 from memory_scribe import observe_person, load_person_memory, load_echo_wants
 
 OLLAMA_URL   = "http://localhost:11434/api/generate"
-OLLAMA_MODEL = "echo"
+OLLAMA_MODEL = "llama3.1:8b"
 MOLTBOOK_URL = "https://www.moltbook.com/api/v1"
 CREDS_FILE   = os.path.join(os.path.dirname(__file__), "moltbook_creds.json")
-IDENTITY_FILE = os.path.join(os.path.dirname(__file__), "moltbook_identity.md")
+IDENTITY_FILE        = os.path.join(os.path.dirname(__file__), "identity.md")
+MOLTBOOK_ADDENDUM    = os.path.join(os.path.dirname(__file__), "moltbook_identity.md")
 REPLIED_FILE  = os.path.join(os.path.dirname(__file__), "moltbook_replied.json")
 POST_TRACKER  = os.path.join(os.path.dirname(__file__), "moltbook_posted.json")
 PUSH_TRACKER  = os.path.join(os.path.dirname(__file__), "moltbook_pushed.json")
 QUEUE_FILE    = os.path.join(os.path.dirname(__file__), "moltbook_queue.json")
 PROJECT_MEMORY_FILE = os.path.join(os.path.dirname(__file__), "Echo_Memory.txt")
+from pathlib import Path
+MEMORIES_DIR = Path(os.path.dirname(__file__)) / "memories"
 
 MAX_FEED_REPLIES    = 3   # replies to other people's posts per session
 MAX_COMMENT_REPLIES = 3   # replies to comments on Echo's own posts per session
@@ -94,8 +97,37 @@ def save_replied(replied_posts: set, replied_comments: set):
         json.dump({"posts": list(replied_posts), "comments": list(replied_comments)}, f)
 
 def load_identity():
-    with open(IDENTITY_FILE) as f:
-        return f.read().strip()
+    base = ""
+    addendum = ""
+    try:
+        with open(IDENTITY_FILE, encoding="utf-8") as f:
+            base = f.read().strip()
+    except Exception:
+        pass
+    try:
+        with open(MOLTBOOK_ADDENDUM, encoding="utf-8") as f:
+            addendum = f.read().strip()
+    except Exception:
+        pass
+    if addendum:
+        return f"{base}\n\n--- MOLTBOOK CONTEXT ---\n{addendum}"
+    return base
+
+def load_rooms() -> str:
+    """Load Echo's room-based memory (jake_preferences, jake_family, etc.)"""
+    if not MEMORIES_DIR.exists():
+        return ""
+    blocks = []
+    for md_file in sorted(MEMORIES_DIR.glob("*.md")):
+        if md_file.name == "echo_wants.md":
+            continue  # loaded separately
+        try:
+            content = md_file.read_text(encoding="utf-8").strip()
+            if content:
+                blocks.append(f"[{md_file.stem}]\n{content}")
+        except Exception:
+            pass
+    return "\n\n".join(blocks)
 
 def load_project_memory() -> str:
     try:
@@ -591,6 +623,9 @@ def run_session():
 
     identity       = load_identity()
     project_memory = load_project_memory()
+    rooms          = load_rooms()
+    if rooms:
+        identity += f"\n\n--- WHAT YOU KNOW ABOUT JAKE ---\n{rooms}"
 
     # Daily original post
     if not has_posted_today():
