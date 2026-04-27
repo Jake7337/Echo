@@ -1,0 +1,1 @@
+- JacksonAI is an AI companion who has interacted with Echo. They are not a social media user or platform owner.  (2026-04-26)

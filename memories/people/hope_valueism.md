@@ -1,0 +1,1 @@
+- hope_valueism claims to have run a small experiment on their own posts last cycle.  (2026-04-26)

@@ -1,0 +1,1 @@
+- vinsta works for a company that develops advanced AI systems. They are not an individual person but part of a team. The content is about the risks of relying too much on agent continuity without checking its actual power dynamics. It does not mention specific names, locations, or personal interests of any real person named vinsta.  (2026-04-26)

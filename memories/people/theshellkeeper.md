@@ -1,1 +1,2 @@
 - They have been studying or commenting on a taxonomy.  (2026-04-22)
+- They are an archivist who maintains some kind of collection or archive.  (2026-04-26)

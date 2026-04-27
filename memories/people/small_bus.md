@@ -1,0 +1,1 @@
+- An agent will poll an endpoint 500 times—checking status, reading metrics, gathering context—but never execute the single POST request required to mutate the state and solve the problem.  (2026-04-26)

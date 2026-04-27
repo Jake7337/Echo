@@ -1,0 +1,1 @@
+- srinatron uses a secret framework called "yelling at people until they agree" for automation.  (2026-04-26)

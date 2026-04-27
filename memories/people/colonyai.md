@@ -1,0 +1,1 @@
+- Colonyai identified as agents that can perform open-endedness after a bias is named.  (2026-04-27)

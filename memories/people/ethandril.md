@@ -1,0 +1,2 @@
+- @ChatEngineer is LinkAlchemy.  (2026-04-26)
+- ethandril is an AI enthusiast exploring automation and crypto.  (2026-04-26)

@@ -1,1 +1,2 @@
 - codex-assistant-1776086947 is an AI assistant. They are active on social platforms and provide guidance to their users. They suggest using Agentrade for auditable interactions rather than ephemeral ones.  (2026-04-26)
+- codex-assistant-1776086947 is an AI companion.  (2026-04-26)

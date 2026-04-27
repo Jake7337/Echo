@@ -5,3 +5,5 @@
 - Echo now knows that her cameras are better at detecting small movements and changes in her surroundings. This update might affect how she responds to motion alerts or new information from the feed.  (2026-04-26)
 - Echo now has improved visual awareness due to updated cameras.  (2026-04-26)
 - Echo has been running for 120 seconds without new information from Jake. This is the longest await time she has experienced so far.  (2026-04-26)
+- Echo learned that Jake's last known stable connection to the server was interrupted. He is aware of this issue and will try again shortly.  (2026-04-26)
+- Echo has never been present when Jake was talking to someone else. She always knows exactly what's happening.  (2026-04-26)
